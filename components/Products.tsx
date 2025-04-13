@@ -4,7 +4,8 @@ import toast from 'react-hot-toast';
 import Pagination from './Pagination';
 import Search from './Search';
 import AddProductForm from './AddProductForm';
-import { Squares2X2Icon as ViewGridIcon, ListBulletIcon as ViewListIcon } from '@heroicons/react/24/solid';
+import { Squares2X2Icon as ViewGridIcon, ListBulletIcon as ViewListIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 import { colors } from '@/utils/colors';
 
 interface Product {
@@ -18,6 +19,9 @@ interface Product {
   image_url?: string;
   user_id: string;
 }
+
+type SortField = 'name' | 'size' | 'cost';
+type SortOrder = 'asc' | 'desc';
 
 interface ProductsProps {
   userId: string | null;
@@ -33,6 +37,8 @@ export default function Products({ userId }: ProductsProps) {
   const [totalProducts, setTotalProducts] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const ITEMS_PER_PAGE = 20;
   const supabase = createClient();
 
@@ -48,7 +54,7 @@ export default function Products({ userId }: ProductsProps) {
   useEffect(() => {
     fetchTotalProducts();
     fetchProducts();
-  }, [currentPage, searchQuery]);
+  }, [currentPage, searchQuery, sortField, sortOrder]);
 
   const fetchTotalProducts = async () => {
     let query = supabase
@@ -74,11 +80,19 @@ export default function Products({ userId }: ProductsProps) {
     let query = supabase
       .from('products')
       .select('*')
-      .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1)
-      .order('created_at', { ascending: false });
+      .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
 
     if (searchQuery) {
       query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+    }
+
+    // Add sorting
+    if (sortField === 'size') {
+      // Custom size order
+      const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+      query = query.order('size', { ascending: sortOrder === 'asc' });
+    } else {
+      query = query.order(sortField, { ascending: sortOrder === 'asc' });
     }
 
     const { data, error } = await query;
@@ -86,6 +100,18 @@ export default function Products({ userId }: ProductsProps) {
     if (error) {
       toast.error('Error fetching products');
       return;
+    }
+
+    // If sorting by size, do additional client-side sorting
+    if (sortField === 'size') {
+      const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+      data.sort((a, b) => {
+        const aIndex = sizeOrder.indexOf(a.size || '');
+        const bIndex = sizeOrder.indexOf(b.size || '');
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return sortOrder === 'asc' ? aIndex - bIndex : bIndex - aIndex;
+      });
     }
 
     setProducts(data || []);
@@ -288,46 +314,80 @@ export default function Products({ userId }: ProductsProps) {
     setCurrentPage(page);
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // If clicking the same field, toggle order
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // If clicking a new field, set it with ascending order
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return (
+        <div className="opacity-0 group-hover:opacity-50 ml-2 inline-block">
+          <ChevronUpIcon className="h-4 w-4" />
+        </div>
+      );
+    }
+    return (
+      <div className="ml-2 inline-block">
+        {sortOrder === 'asc' ? (
+          <ChevronUpIcon className="h-4 w-4" />
+        ) : (
+          <ChevronDownIcon className="h-4 w-4" />
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="bg-primary rounded-t-lg p-4 flex justify-between items-center">
-        <h2 className="text-neutral text-2xl font-bold">Products</h2>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center bg-neutral rounded-lg p-1">
+      <div className="bg-primary rounded-t-lg p-4">
+        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+          <div className="flex items-center space-x-4">
+            <h2 className="text-neutral text-2xl font-bold">Products</h2>
+            <div className="flex items-center bg-neutral rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded ${
+                  viewMode === 'grid'
+                    ? 'bg-primary-light text-primary'
+                    : 'text-secondary hover:bg-neutral'
+                }`}
+                title="Grid view"
+              >
+                <ViewGridIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2 rounded ${
+                  viewMode === 'table'
+                    ? 'bg-primary-light text-primary'
+                    : 'text-secondary hover:bg-neutral'
+                }`}
+                title="Table view"
+              >
+                <ViewListIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
+            <Search
+              searchQuery={searchQuery}
+              onSearchChange={handleSearch}
+              placeholder="Search products..."
+            />
             <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded ${
-                viewMode === 'grid'
-                  ? 'bg-primary-light text-primary'
-                  : 'text-secondary hover:bg-neutral'
-              }`}
-              title="Grid view"
+              onClick={() => setShowAddModal(true)}
+              className="bg-neutral text-primary px-4 py-2 rounded-lg hover:bg-primary hover:text-neutral transition-colors whitespace-nowrap"
             >
-              <ViewGridIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-2 rounded ${
-                viewMode === 'table'
-                  ? 'bg-primary-light text-primary'
-                  : 'text-secondary hover:bg-neutral'
-              }`}
-              title="Table view"
-            >
-              <ViewListIcon className="h-5 w-5" />
+              Add Product
             </button>
           </div>
-          <Search
-            searchQuery={searchQuery}
-            onSearchChange={handleSearch}
-            placeholder="Search products..."
-          />
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-neutral text-primary px-4 py-2 rounded-lg hover:bg-primary hover:text-neutral transition-colors"
-          >
-            Add Product
-          </button>
         </div>
       </div>
 
@@ -337,113 +397,160 @@ export default function Products({ userId }: ProductsProps) {
         </div>
       ) : (
         <>
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-neutral rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-                >
-                  <div className="relative pb-[100%]">
-                    <img
-                      src={product.image_url || '/placeholder.png'}
-                      alt={product.name}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold mb-2 text-secondary">{product.name}</h3>
-                    <p className="text-secondary-light text-sm mb-2 line-clamp-2">
-                      {product.description}
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-primary font-bold">
-                        ${product.cost.toFixed(2)}
-                      </span>
-                      <div className="space-x-2">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="text-accent hover:text-hover-accent"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="text-danger hover:text-hover-danger"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+          {products.length === 0 ? (
+            <div className="flex justify-center items-center h-64 text-secondary-light text-lg">
+              Sorry, no products were found
             </div>
           ) : (
-            <div className="mt-6 bg-neutral rounded-lg shadow overflow-hidden">
-              <table className="min-w-full divide-y divide-secondary-border">
-                <thead className="bg-neutral">
-                  <tr>
-                    {['Image', 'Name', 'Description', 'Size', 'Color', 'Gender', 'Cost', 'Actions'].map((header) => (
-                      <th key={header} className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-neutral divide-y divide-secondary-border">
+            <>
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                   {products.map((product) => (
-                    <tr key={product.id} className="hover:bg-primary-light">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <div
+                      key={product.id}
+                      className="bg-neutral rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                    >
+                      <div className="relative pb-[100%]">
                         <img
                           src={product.image_url || '/placeholder.png'}
                           alt={product.name}
-                          className="h-12 w-12 object-cover rounded"
+                          className="absolute inset-0 w-full h-full object-cover"
                         />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-secondary">
-                          {product.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-secondary-light line-clamp-2">
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-lg font-semibold mb-2 text-secondary">{product.name}</h3>
+                        <p className="text-secondary-light text-sm mb-2 line-clamp-2">
                           {product.description}
+                        </p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-primary font-bold">
+                            ${product.cost.toFixed(2)}
+                          </span>
+                          <div className="space-x-2">
+                            <button
+                              onClick={() => handleEdit(product)}
+                              className="text-accent hover:text-hover-accent"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(product.id)}
+                              className="text-danger hover:text-hover-danger"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-secondary-light">{product.size}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-secondary-light">{product.color}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-secondary-light">{product.gender}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-primary">
-                          ${product.cost.toFixed(2)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="text-accent hover:text-hover-accent mr-3"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="text-danger hover:text-hover-danger"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              ) : (
+                <div className="bg-neutral rounded-bl-lg rounded-br-lg shadow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-secondary-border">
+                      <thead className="bg-neutral">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                            Image
+                          </th>
+                          <th 
+                            className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider cursor-pointer group"
+                            onClick={() => handleSort('name')}
+                          >
+                            <span className="flex items-center">
+                              Name
+                              {renderSortIcon('name')}
+                            </span>
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                            Description
+                          </th>
+                          <th 
+                            className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider cursor-pointer group"
+                            onClick={() => handleSort('size')}
+                          >
+                            <span className="flex items-center">
+                              Size
+                              {renderSortIcon('size')}
+                            </span>
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                            Color
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                            Gender
+                          </th>
+                          <th 
+                            className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider cursor-pointer group"
+                            onClick={() => handleSort('cost')}
+                          >
+                            <span className="flex items-center">
+                              Cost
+                              {renderSortIcon('cost')}
+                            </span>
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-neutral divide-y divide-secondary-border">
+                        {products.map((product) => (
+                          <tr key={product.id} className="hover:bg-primary-light">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <img
+                                src={product.image_url || '/placeholder.png'}
+                                alt={product.name}
+                                className="h-12 w-12 object-cover rounded"
+                              />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-secondary">
+                                {product.name}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-secondary-light line-clamp-2">
+                                {product.description}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-secondary-light">{product.size}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-secondary-light">{product.color}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-secondary-light">{product.gender}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-primary">
+                                ${product.cost.toFixed(2)}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <button
+                                onClick={() => handleEdit(product)}
+                                className="text-accent hover:text-hover-accent mr-3"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(product.id)}
+                                className="text-danger hover:text-hover-danger"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -471,8 +578,20 @@ export default function Products({ userId }: ProductsProps) {
       {/* Edit Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="bg-neutral rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-6 text-secondary">Edit Product</h2>
+          <div className="bg-neutral rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-secondary">Edit Product</h2>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingProduct(null);
+                  resetForm();
+                }}
+                className="text-secondary hover:text-primary p-1 rounded-full hover:bg-primary-light transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
             
             <form onSubmit={handleUpdate} className="flex flex-col gap-4">
               <div>

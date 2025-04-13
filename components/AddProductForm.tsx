@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import toast from 'react-hot-toast';
+import { XMarkIcon } from '@heroicons/react/24/solid';
 
 interface AddProductFormProps {
   userId: string | null;
@@ -118,8 +119,16 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
-      <div className="bg-neutral rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6 text-secondary">Add New Product</h2>
+      <div className="bg-neutral rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-secondary">Add New Product</h2>
+          <button
+            onClick={onClose}
+            className="text-secondary hover:text-primary p-1 rounded-full hover:bg-primary-light transition-colors"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
         
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>

@@ -17,7 +17,7 @@ export default function Search({ searchQuery, onSearchChange, placeholder = 'Sea
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={placeholder}
-          className={`ml-2 w-full bg-transparent border-none focus:outline-none text-[${colors.secondary}] placeholder-[${colors['secondary-light']}]`}
+          className={`ml-2 w-full text-[${colors.secondary}] bg-transparent border-none focus:outline-none placeholder-[${colors.neutral}]`}
         />
         {searchQuery && (
           <button

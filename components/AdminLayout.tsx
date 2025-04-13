@@ -52,9 +52,6 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
               <div className="ml-4 text-xl font-semibold text-secondary">Admin Dashboard</div>
             </div>
             <div className="flex items-center space-x-4">
-              {user && (
-                <span className="text-secondary">{user.email}</span>
-              )}
               <ThemeToggle />
               <Link
                 href="/admin/profile"
