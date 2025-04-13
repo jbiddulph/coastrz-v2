@@ -1,75 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Toaster } from 'react-hot-toast';
-import { supabase } from '../lib/supabase';
-import Todo from '../components/Todo';
-import Products from '../components/Products';
-import Auth from '../components/Auth';
+import { useEffect } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
+import Auth from '@/components/Auth';
 
 export default function Home() {
-  const [session, setSession] = useState(null);
-  const [activeTab, setActiveTab] = useState<'todos' | 'products'>('todos');
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        router.push('/admin/products');
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        router.push('/admin/products');
+      }
     });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    checkUser();
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   return (
-    <main style={{ minHeight: '100vh', padding: '2.5rem 0' }}>
-      <Toaster position="top-center" />
-      {!session ? (
-        <Auth />
-      ) : (
-        <div className="container">
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            alignItems: 'center', 
-            marginBottom: '1rem',
-            gap: '1rem'
-          }}>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                onClick={() => setActiveTab('todos')}
-                className={`button ${activeTab === 'todos' ? '' : 'secondary'}`}
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => setActiveTab('products')}
-                className={`button ${activeTab === 'products' ? '' : 'secondary'}`}
-              >
-                Products
-              </button>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ color: '#666' }}>
-                {session.user.email}
-              </span>
-              <button
-                onClick={() => supabase.auth.signOut()}
-                className="button danger"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-          {activeTab === 'todos' ? <Todo /> : <Products />}
+    <main className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-md mx-auto px-4">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome</h1>
+          <p className="text-gray-600">Please sign in to access the admin dashboard.</p>
         </div>
-      )}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <Auth />
+        </div>
+      </div>
     </main>
   );
 } 

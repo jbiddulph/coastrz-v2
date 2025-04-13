@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { createClient } from '@/utils/supabase/client';
 import toast from 'react-hot-toast';
+import Pagination from './Pagination';
+import Search from './Search';
+import AddProductForm from './AddProductForm';
+import { Squares2X2Icon as ViewGridIcon, ListBulletIcon as ViewListIcon } from '@heroicons/react/24/solid';
+import { colors } from '@/utils/colors';
 
 interface Product {
   id: string;
@@ -14,12 +19,22 @@ interface Product {
   user_id: string;
 }
 
-export default function Products() {
+interface ProductsProps {
+  userId: string | null;
+}
+
+export default function Products({ userId }: ProductsProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const ITEMS_PER_PAGE = 20;
+  const supabase = createClient();
 
   // Form state
   const [name, setName] = useState('');
@@ -31,19 +46,42 @@ export default function Products() {
   const [image, setImage] = useState<File | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setUserId(user.id);
-        fetchProducts();
-      }
-    });
-  }, []);
+    fetchTotalProducts();
+    fetchProducts();
+  }, [currentPage, searchQuery]);
+
+  const fetchTotalProducts = async () => {
+    let query = supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true });
+
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+    }
+
+    const { count, error } = await query;
+
+    if (error) {
+      toast.error('Error fetching total products count');
+      return;
+    }
+
+    setTotalProducts(count || 0);
+  };
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
+    setLoading(true);
+    let query = supabase
       .from('products')
       .select('*')
+      .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1)
       .order('created_at', { ascending: false });
+
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast.error('Error fetching products');
@@ -51,6 +89,12 @@ export default function Products() {
     }
 
     setProducts(data || []);
+    setLoading(false);
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page when searching
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,9 +210,10 @@ export default function Products() {
     e.preventDefault();
     if (!userId || !editingProduct) return;
 
+    const productToUpdate = editingProduct; // Create a non-null reference
     setLoading(true);
     try {
-      let imageUrl = editingProduct.image_url;
+      let imageUrl = productToUpdate.image_url;
       if (image) {
         const newImageUrl = await uploadImage(image);
         if (newImageUrl) imageUrl = newImageUrl;
@@ -185,8 +230,8 @@ export default function Products() {
           cost: parseFloat(cost),
           image_url: imageUrl
         })
-        .eq('id', editingProduct.id)
-        .eq('user_id', userId); // Ensure user owns the product
+        .eq('id', productToUpdate.id)
+        .eq('user_id', userId);
 
       if (error) throw error;
 
@@ -239,164 +284,247 @@ export default function Products() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   return (
-    <div className="container">
-      <div className="card">
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Add New Product</h2>
-        
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Name *</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="input"
-            />
+    <div className="container mx-auto px-4 py-8">
+      <div className="bg-primary rounded-t-lg p-4 flex justify-between items-center">
+        <h2 className="text-neutral text-2xl font-bold">Products</h2>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center bg-neutral rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded ${
+                viewMode === 'grid'
+                  ? 'bg-primary-light text-primary'
+                  : 'text-secondary hover:bg-neutral'
+              }`}
+              title="Grid view"
+            >
+              <ViewGridIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded ${
+                viewMode === 'table'
+                  ? 'bg-primary-light text-primary'
+                  : 'text-secondary hover:bg-neutral'
+              }`}
+              title="Table view"
+            >
+              <ViewListIcon className="h-5 w-5" />
+            </button>
           </div>
-
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Description *</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              className="input"
-              style={{ minHeight: '100px' }}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Size</label>
-              <input
-                type="text"
-                value={size}
-                onChange={(e) => setSize(e.target.value)}
-                className="input"
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Color</label>
-              <input
-                type="text"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="input"
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Gender</label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value as 'male' | 'female' | 'unisex' | '')}
-                className="input"
-              >
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="unisex">Unisex</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Cost *</label>
-              <input
-                type="number"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
-                required
-                step="0.01"
-                min="0"
-                className="input"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Product Image</label>
-            <input
-              type="file"
-              onChange={handleImageChange}
-              accept="image/*"
-              className="input"
-            />
-          </div>
-
+          <Search
+            searchQuery={searchQuery}
+            onSearchChange={handleSearch}
+            placeholder="Search products..."
+          />
           <button
-            type="submit"
-            disabled={loading}
-            className="button"
-            style={{ marginTop: '1rem' }}
+            onClick={() => setShowAddModal(true)}
+            className="bg-neutral text-primary px-4 py-2 rounded-lg hover:bg-primary hover:text-neutral transition-colors"
           >
-            {loading ? 'Adding Product...' : 'Add Product'}
+            Add Product
           </button>
-        </form>
+        </div>
       </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <>
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+              {products.map((product) => (
+                <div
+                  key={product.id}
+                  className="bg-neutral rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                >
+                  <div className="relative pb-[100%]">
+                    <img
+                      src={product.image_url || '/placeholder.png'}
+                      alt={product.name}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold mb-2 text-secondary">{product.name}</h3>
+                    <p className="text-secondary-light text-sm mb-2 line-clamp-2">
+                      {product.description}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-primary font-bold">
+                        ${product.cost.toFixed(2)}
+                      </span>
+                      <div className="space-x-2">
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="text-accent hover:text-hover-accent"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="text-danger hover:text-hover-danger"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 bg-neutral rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-secondary-border">
+                <thead className="bg-neutral">
+                  <tr>
+                    {['Image', 'Name', 'Description', 'Size', 'Color', 'Gender', 'Cost', 'Actions'].map((header) => (
+                      <th key={header} className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-neutral divide-y divide-secondary-border">
+                  {products.map((product) => (
+                    <tr key={product.id} className="hover:bg-primary-light">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <img
+                          src={product.image_url || '/placeholder.png'}
+                          alt={product.name}
+                          className="h-12 w-12 object-cover rounded"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-secondary">
+                          {product.name}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-secondary-light line-clamp-2">
+                          {product.description}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-secondary-light">{product.size}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-secondary-light">{product.color}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-secondary-light">{product.gender}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-primary">
+                          ${product.cost.toFixed(2)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="text-accent hover:text-hover-accent mr-3"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="text-danger hover:text-hover-danger"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      <div className="mt-6">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(totalProducts / ITEMS_PER_PAGE)}
+          onPageChange={setCurrentPage}
+        />
+      </div>
+
+      {/* Add Product Modal */}
+      {showAddModal && (
+        <AddProductForm
+          userId={userId}
+          onClose={() => setShowAddModal(false)}
+          onProductAdded={() => {
+            fetchProducts();
+            fetchTotalProducts();
+          }}
+        />
+      )}
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="modal-overlay">
-          <div className="modal-content card">
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Edit Product</h2>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
+          <div className="bg-neutral rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6 text-secondary">Edit Product</h2>
             
-            <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleUpdate} className="flex flex-col gap-4">
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Name *</label>
+                <label className="block mb-2 text-secondary">Name *</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="input"
+                  className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Description *</label>
+                <label className="block mb-2 text-secondary">Description *</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required
-                  className="input"
-                  style={{ minHeight: '100px' }}
+                  className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem' }}>Size</label>
+                  <label className="block mb-2 text-secondary">Size</label>
                   <input
                     type="text"
                     value={size}
                     onChange={(e) => setSize(e.target.value)}
-                    className="input"
+                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem' }}>Color</label>
+                  <label className="block mb-2 text-secondary">Color</label>
                   <input
                     type="text"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
-                    className="input"
+                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem' }}>Gender</label>
+                  <label className="block mb-2 text-secondary">Gender</label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as 'male' | 'female' | 'unisex' | '')}
-                    className="input"
+                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Select gender</option>
                     <option value="male">Male</option>
@@ -406,7 +534,7 @@ export default function Products() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem' }}>Cost *</label>
+                  <label className="block mb-2 text-secondary">Cost *</label>
                   <input
                     type="number"
                     value={cost}
@@ -414,33 +542,33 @@ export default function Products() {
                     required
                     step="0.01"
                     min="0"
-                    className="input"
+                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Product Image</label>
+                <label className="block mb-2 text-secondary">Product Image</label>
                 <input
                   type="file"
                   onChange={handleImageChange}
                   accept="image/*"
-                  className="input"
+                  className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                {editingProduct.image_url && (
+                {editingProduct?.image_url && (
                   <img
-                    src={editingProduct.image_url}
+                    src={editingProduct?.image_url}
                     alt="Current product image"
-                    style={{ width: '100px', height: '100px', objectFit: 'cover', marginTop: '0.5rem' }}
+                    className="w-20 h-20 object-cover mt-2"
                   />
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div className="mt-4">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="button"
+                  className="px-6 py-2 bg-primary text-neutral rounded-lg hover:bg-hover-primary transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Updating...' : 'Update Product'}
                 </button>
@@ -451,7 +579,7 @@ export default function Products() {
                     setEditingProduct(null);
                     resetForm();
                   }}
-                  className="button button-secondary"
+                  className="px-6 py-2 bg-secondary text-neutral rounded-lg hover:opacity-90 transition-colors ml-2"
                 >
                   Cancel
                 </button>
@@ -460,92 +588,6 @@ export default function Products() {
           </div>
         </div>
       )}
-
-      <div className="card" style={{ marginTop: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Products</h2>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-          {products.map((product) => (
-            <div key={product.id} className="card" style={{ margin: 0 }}>
-              {product.image_url && (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: 'var(--border-radius)' }}
-                />
-              )}
-              <div style={{ padding: '1rem' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{product.name}</h3>
-                <p style={{ color: '#666', marginBottom: '0.5rem' }}>{product.description}</p>
-                <p style={{ fontWeight: 'bold', color: '#0070f3' }}>£{product.cost.toFixed(2)}</p>
-                {product.size && <p style={{ fontSize: '0.875rem' }}>Size: {product.size}</p>}
-                {product.color && <p style={{ fontSize: '0.875rem' }}>Color: {product.color}</p>}
-                {product.gender && <p style={{ fontSize: '0.875rem' }}>Gender: {product.gender}</p>}
-                
-                {/* Show edit/delete buttons only for user's own products */}
-                {userId === product.user_id && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                    <button
-                      onClick={() => handleEdit(product)}
-                      className="button button-small"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="button button-small button-danger"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-
-        .modal-content {
-          background: white;
-          padding: 2rem;
-          border-radius: var(--border-radius);
-          width: 90%;
-          max-width: 600px;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-
-        .button-small {
-          padding: 0.25rem 0.5rem;
-          font-size: 0.875rem;
-        }
-
-        .button-secondary {
-          background-color: #666;
-        }
-
-        .button-danger {
-          background-color: #dc3545;
-        }
-
-        .button-danger:hover {
-          background-color: #bd2130;
-        }
-      `}</style>
     </div>
   );
 } 
