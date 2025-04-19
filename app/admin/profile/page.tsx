@@ -17,7 +17,7 @@ export default function ProfilePage() {
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <h1 className="text-2xl font-bold mb-4">My Profile</h1>
+      <h1 className="text-2xl font-bold mb-4 font-cooper-std">My Profile</h1>
       {user && (
         <div className="space-y-4">
           <div>

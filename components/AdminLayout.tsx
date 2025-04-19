@@ -28,6 +28,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
 
   const menuItems = [
     { path: '/admin/products', label: 'Products', icon: FiPackage },
+    { path: '/admin/orders', label: 'Orders', icon: FiCheckSquare },
     { path: '/admin/todos', label: 'Todos', icon: FiCheckSquare },
   ];
 

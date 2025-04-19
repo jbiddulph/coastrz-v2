@@ -25,6 +25,9 @@ module.exports = {
         'bg-secondary': 'var(--color-bg-secondary)',
         'bg-hover': 'var(--color-bg-hover)',
       },
+      fontFamily: {
+        'cooper-std': ['Cooper Std', 'serif'],
+      },
     },
   },
   plugins: [],

@@ -4,33 +4,27 @@ import toast from 'react-hot-toast';
 import Pagination from './Pagination';
 import Search from './Search';
 import AddProductForm from './AddProductForm';
+import ImageCarousel from './ImageCarousel';
 import { Squares2X2Icon as ViewGridIcon, ListBulletIcon as ViewListIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 import { colors } from '@/utils/colors';
+import { Product, ProductImage, ImageFile } from '@/types/types';
 
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  size?: string;
-  color?: string;
-  gender?: 'male' | 'female' | 'unisex';
-  cost: number;
-  image_url?: string;
-  user_id: string;
+interface ProductWithImages extends Product {
+  product_images: ProductImage[];
 }
-
-type SortField = 'name' | 'size' | 'cost';
-type SortOrder = 'asc' | 'desc';
 
 interface ProductsProps {
   userId: string | null;
 }
 
+type SortField = 'name' | 'cost' | 'created_at' | 'size';
+type SortOrder = 'asc' | 'desc';
+
 export default function Products({ userId }: ProductsProps) {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithImages[]>([]);
   const [loading, setLoading] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductWithImages | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,7 +43,7 @@ export default function Products({ userId }: ProductsProps) {
   const [color, setColor] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | 'unisex' | ''>('');
   const [cost, setCost] = useState('');
-  const [image, setImage] = useState<File | null>(null);
+  const [images, setImages] = useState<ImageFile[]>([]);
 
   useEffect(() => {
     fetchTotalProducts();
@@ -77,45 +71,26 @@ export default function Products({ userId }: ProductsProps) {
 
   const fetchProducts = async () => {
     setLoading(true);
-    let query = supabase
-      .from('products')
-      .select('*')
-      .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
+    try {
+      let query = supabase
+        .from('products')
+        .select('*, product_images(*)')
+        .order(sortField, { ascending: sortOrder === 'asc' })
+        .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
 
-    if (searchQuery) {
-      query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-    }
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      }
 
-    // Add sorting
-    if (sortField === 'size') {
-      // Custom size order
-      const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-      query = query.order('size', { ascending: sortOrder === 'asc' });
-    } else {
-      query = query.order(sortField, { ascending: sortOrder === 'asc' });
-    }
+      const { data, error } = await query;
 
-    const { data, error } = await query;
-
-    if (error) {
+      if (error) throw error;
+      setProducts(data as ProductWithImages[]);
+    } catch (error) {
       toast.error('Error fetching products');
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    // If sorting by size, do additional client-side sorting
-    if (sortField === 'size') {
-      const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-      data.sort((a, b) => {
-        const aIndex = sizeOrder.indexOf(a.size || '');
-        const bIndex = sizeOrder.indexOf(b.size || '');
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return sortOrder === 'asc' ? aIndex - bIndex : bIndex - aIndex;
-      });
-    }
-
-    setProducts(data || []);
-    setLoading(false);
   };
 
   const handleSearch = (query: string) => {
@@ -125,8 +100,28 @@ export default function Products({ userId }: ProductsProps) {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setImage(e.target.files[0]);
+      const newImages = Array.from(e.target.files).map((file, index) => ({
+        file,
+        preview: URL.createObjectURL(file),
+        isPrimary: index === 0 && images.length === 0 // First image is primary by default only if no other images
+      }));
+      setImages([...images, ...newImages]);
     }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...images];
+    URL.revokeObjectURL(newImages[index].preview); // Clean up preview URL
+    newImages.splice(index, 1);
+    setImages(newImages);
+  };
+
+  const setPrimaryImage = (index: number) => {
+    const newImages = images.map((img, i) => ({
+      ...img,
+      isPrimary: i === index
+    }));
+    setImages(newImages);
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
@@ -190,22 +185,22 @@ export default function Products({ userId }: ProductsProps) {
     setColor('');
     setGender('');
     setCost('');
-    setImage(null);
+    setImages([]);
   };
 
   // Set form fields for editing
-  const setEditForm = (product: Product) => {
+  const setEditForm = (product: ProductWithImages) => {
     setName(product.name);
     setDescription(product.description);
     setSize(product.size || '');
     setColor(product.color || '');
     setGender(product.gender || '');
     setCost(product.cost.toString());
-    setImage(null);
+    setImages([]);
   };
 
   // Handle edit button click
-  const handleEdit = (product: Product) => {
+  const handleEdit = (product: ProductWithImages) => {
     setEditingProduct(product);
     setEditForm(product);
     setShowEditModal(true);
@@ -236,16 +231,24 @@ export default function Products({ userId }: ProductsProps) {
     e.preventDefault();
     if (!userId || !editingProduct) return;
 
-    const productToUpdate = editingProduct; // Create a non-null reference
+    const productToUpdate = editingProduct;
     setLoading(true);
     try {
-      let imageUrl = productToUpdate.image_url;
-      if (image) {
-        const newImageUrl = await uploadImage(image);
-        if (newImageUrl) imageUrl = newImageUrl;
+      // Upload all new images
+      const uploadedImages: { url: string; isPrimary: boolean }[] = [];
+      for (const image of images) {
+        const imageUrl = await uploadImage(image.file);
+        if (imageUrl) {
+          uploadedImages.push({
+            url: imageUrl,
+            isPrimary: image.isPrimary
+          });
+        }
       }
 
-      const { error } = await supabase
+      // Update the product with the primary image
+      const primaryImage = uploadedImages.find(img => img.isPrimary);
+      const { error: productError } = await supabase
         .from('products')
         .update({
           name,
@@ -254,12 +257,36 @@ export default function Products({ userId }: ProductsProps) {
           color: color || null,
           gender: gender || null,
           cost: parseFloat(cost),
-          image_url: imageUrl
+          image_url: primaryImage?.url || editingProduct.image_url
         })
         .eq('id', productToUpdate.id)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (productError) throw productError;
+
+      // Delete existing product images if there are new ones
+      if (uploadedImages.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('product_images')
+          .delete()
+          .eq('product_id', productToUpdate.id);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new product images
+        const { error: imagesError } = await supabase
+          .from('product_images')
+          .insert(
+            uploadedImages.map((img, index) => ({
+              product_id: productToUpdate.id,
+              image_url: img.url,
+              display_order: index + 1,
+              is_primary: img.isPrimary
+            }))
+          );
+
+        if (imagesError) throw imagesError;
+      }
 
       toast.success('Product updated successfully!');
       setShowEditModal(false);
@@ -267,6 +294,7 @@ export default function Products({ userId }: ProductsProps) {
       resetForm();
       fetchProducts();
     } catch (error) {
+      console.error('Error updating product:', error);
       toast.error('Error updating product');
     } finally {
       setLoading(false);
@@ -280,8 +308,8 @@ export default function Products({ userId }: ProductsProps) {
     setLoading(true);
     try {
       let imageUrl = null;
-      if (image) {
-        imageUrl = await uploadImage(image);
+      if (images.length > 0) {
+        imageUrl = await uploadImage(images[0].file);
         if (!imageUrl) return;
       }
 
@@ -391,41 +419,42 @@ export default function Products({ userId }: ProductsProps) {
         </div>
       </div>
 
+      <div className="mt-6">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(totalProducts / ITEMS_PER_PAGE)}
+          onPageChange={setCurrentPage}
+        />
+      </div>
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
         </div>
       ) : (
         <>
           {products.length === 0 ? (
-            <div className="flex justify-center items-center h-64 text-secondary-light text-lg">
-              Sorry, no products were found
+            <div className="text-center py-8 text-secondary-light">
+              No products found
             </div>
           ) : (
             <>
               {viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {products.map((product) => (
                     <div
                       key={product.id}
                       className="bg-neutral rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
                     >
-                      <div className="relative pb-[100%]">
-                        <img
-                          src={product.image_url || '/placeholder.png'}
-                          alt={product.name}
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                      </div>
+                      <ImageCarousel
+                        images={product.product_images || []}
+                        mainImage={product.image_url}
+                      />
                       <div className="p-4">
-                        <h3 className="text-lg font-semibold mb-2 text-secondary">{product.name}</h3>
-                        <p className="text-secondary-light text-sm mb-2 line-clamp-2">
-                          {product.description}
-                        </p>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-secondary">{product.name}</h3>
+                          <p className="text-primary font-bold">£{product.cost.toFixed(2)}</p>
+                        </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-primary font-bold">
-                            ${product.cost.toFixed(2)}
-                          </span>
                           <div className="space-x-2">
                             <button
                               onClick={() => handleEdit(product)}
@@ -526,7 +555,7 @@ export default function Products({ userId }: ProductsProps) {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-primary">
-                                ${product.cost.toFixed(2)}
+                                £{product.cost.toFixed(2)}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -577,7 +606,7 @@ export default function Products({ userId }: ProductsProps) {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
+        <div className="z-50 fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
           <div className="bg-neutral rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-secondary">Edit Product</h2>
@@ -667,19 +696,76 @@ export default function Products({ userId }: ProductsProps) {
               </div>
 
               <div>
-                <label className="block mb-2 text-secondary">Product Image</label>
+                <label className="block mb-2 text-secondary">Product Images</label>
                 <input
                   type="file"
                   onChange={handleImageChange}
                   accept="image/*"
+                  multiple
                   className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                {editingProduct?.image_url && (
-                  <img
-                    src={editingProduct?.image_url}
-                    alt="Current product image"
-                    className="w-20 h-20 object-cover mt-2"
-                  />
+                
+                {/* Current Images */}
+                {editingProduct?.product_images && editingProduct.product_images.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-secondary mb-2">Current Images</h4>
+                    <div className="grid grid-cols-4 gap-4">
+                      {editingProduct.product_images.map((img) => (
+                        <div key={img.id} className="relative">
+                          <img
+                            src={img.image_url}
+                            alt="Product image"
+                            className={`w-full h-24 object-cover rounded-lg ${
+                              img.is_primary ? 'ring-2 ring-primary' : ''
+                            }`}
+                          />
+                          {img.is_primary && (
+                            <span className="absolute top-1 left-1 bg-primary text-white text-xs px-2 py-1 rounded-full">
+                              Primary
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New Images */}
+                {images.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-secondary mb-2">New Images</h4>
+                    <div className="grid grid-cols-4 gap-4">
+                      {images.map((img, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={img.preview}
+                            alt={`Preview ${index + 1}`}
+                            className={`w-full h-24 object-cover rounded-lg ${
+                              img.isPrimary ? 'ring-2 ring-primary' : ''
+                            }`}
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPrimaryImage(index)}
+                              className="p-2 bg-primary text-white rounded-full hover:bg-hover-primary"
+                              title="Set as primary image"
+                            >
+                              ★
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="p-2 bg-secondary text-white rounded-full hover:bg-hover-danger"
+                              title="Remove image"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
 

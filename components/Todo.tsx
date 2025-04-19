@@ -98,7 +98,7 @@ export default function Todo() {
   return (
     <div className="max-w-3xl mx-auto p-4">
       <div className="bg-neutral rounded-lg shadow-lg p-6">
-        <h1 className="text-2xl font-bold mb-6 text-secondary">Todo List</h1>
+        <h1 className="text-2xl font-bold mb-6 text-secondary font-cooper-std">Todo List</h1>
         
         <form onSubmit={addTodo} className="mb-6">
           <div className="flex gap-2">

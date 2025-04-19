@@ -1,12 +1,15 @@
 import './globals.css'
+import './fonts.css'
 import { Inter } from 'next/font/google'
 import { Toaster } from 'react-hot-toast';
+import { CartProvider } from '@/contexts/CartContext';
+import Footer from '@/components/Footer';
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Admin Dashboard',
-  description: 'Admin dashboard for managing products and todos',
+  title: 'Shop - Your Online Store',
+  description: 'Find the best products at great prices',
 }
 
 export default function RootLayout({
@@ -40,8 +43,15 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        {children}
-        <Toaster position="bottom-right" />
+        <CartProvider>
+          <div className="min-h-screen flex flex-col">
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+          </div>
+          <Toaster position="bottom-right" />
+        </CartProvider>
       </body>
     </html>
   )
