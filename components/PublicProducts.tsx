@@ -460,7 +460,7 @@ export default function PublicProducts() {
                       e.preventDefault();
                       e.stopPropagation();
                       const isActive = filters.category === product.category_id;
-                      handleFilterChange('category', isActive ? 'all' : product.category_id);
+                      handleFilterChange('category', isActive ? 'all' : (product.category_id || 'all'));
                     }}
                     className={`absolute top-2 left-2 px-3 py-1 rounded-full text-sm font-medium z-30 transition-all transform hover:scale-105 ${
                       filters.category === product.category_id
@@ -512,7 +512,8 @@ export default function PublicProducts() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        handleFilterChange('category', filters.category === product.categories![0].id ? 'all' : product.categories![0].id);
+                        const isActive = filters.category === product.categories![0].id;
+                        handleFilterChange('category', isActive ? 'all' : (product.categories![0].id || 'all'));
                       }}
                       className={`mb-2 px-2 py-1 text-xs rounded-full transition-colors ${
                         filters.category === product.categories![0].id
