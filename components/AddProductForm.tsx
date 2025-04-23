@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/client';
 import toast from 'react-hot-toast';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import { ProductImage, ImageFile } from '@/types/types';
+import CategorySelect from '@/components/ui/CategorySelect';
 
 interface AddProductFormProps {
   userId: string | null;
@@ -17,6 +18,7 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | 'unisex' | ''>('');
@@ -131,11 +133,12 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
           user_id: userId,
           name,
           description,
+          category_id: categoryId,
           size: size || null,
           color: color || null,
           gender: gender || null,
           cost: parseFloat(cost),
-          image_url: uploadedImages.find(img => img.isPrimary)?.url || uploadedImages[0].url // Use primary image as main image
+          image_url: uploadedImages.find(img => img.isPrimary)?.url || uploadedImages[0].url
         }])
         .select()
         .single();
@@ -193,12 +196,22 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
           </div>
 
           <div>
+            <label className="block mb-2 text-secondary">Category *</label>
+            <CategorySelect
+              value={categoryId}
+              onChange={setCategoryId}
+              required
+              className="w-full px-4 py-2 bg-bg-main border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-secondary"
+            />
+          </div>
+
+          <div>
             <label className="block mb-2 text-secondary">Description *</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
-              className="w-full px-4 py-2 bg-bg-main border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-secondary placeholder-secondary-light min-h-[100px]"
+              className="w-full px-4 py-2 bg-bg-main border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-secondary placeholder-secondary-light"
             />
           </div>
 

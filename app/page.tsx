@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar';
 export default function Home() {
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-background py-8">
         <PublicProducts />
       </div>

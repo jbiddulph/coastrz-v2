@@ -6,7 +6,6 @@ import { createClient } from '@/utils/supabase/client';
 import { ChevronLeftIcon, ShareIcon } from '@heroicons/react/24/solid';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
-import Navbar from '@/components/Navbar';
 import ImageCarousel from '@/components/ImageCarousel';
 import Link from 'next/link';
 import { Product, ProductImage } from '@/types/types';
@@ -108,7 +107,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-bg-main">
-        <Navbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
             <div className="h-96 bg-neutral rounded-lg mb-8"></div>
@@ -124,10 +122,13 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   if (!product) {
     return (
       <div className="min-h-screen bg-bg-main">
-        <Navbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-secondary-light">
-            Product not found
+            <h2 className="text-2xl font-bold mb-2">Product not found</h2>
+            <p className="mb-4">The product you're looking for doesn't exist or has been removed.</p>
+            <Link href="/" className="text-primary hover:text-hover-primary transition-colors">
+              Return to Home
+            </Link>
           </div>
         </div>
       </div>
@@ -136,7 +137,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen bg-bg-main">
-      <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button
           onClick={() => router.back()}
@@ -151,7 +151,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           <div className="relative">
             <ImageCarousel 
               images={images} 
-              mainImage={product.image_url}
+              mainImage={product.image_url || undefined}
             />
           </div>
 
@@ -203,23 +203,34 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   min="1"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value)))}
-                  className="w-full p-2 border border-secondary-border rounded-lg focus:ring-2 focus:ring-primary"
+                  className={`w-full p-2 border border-secondary-border rounded-lg focus:ring-2 focus:ring-primary ${
+                    product.quantity === 1 ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={product.quantity === 1}
                 />
+                {product.quantity === 1 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Only 1 available
+                  </p>
+                )}
               </div>
             </div>
 
             <button
               onClick={handleAddToCart}
-              className="w-full py-4 bg-primary text-white rounded-lg hover:bg-hover-primary transition-colors text-lg font-medium"
+              className={`w-full py-4 bg-primary text-white rounded-lg transition-colors text-lg font-medium ${
+                product.quantity === 1 ? 'hover:bg-hover-primary' : 'opacity-50 cursor-not-allowed'
+              }`}
+              disabled={product.quantity < 1}
             >
-              Add to Cart
+              {product.quantity < 1 ? 'Out of Stock' : 'Add to Cart'}
             </button>
           </div>
         </div>
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
-          <div className="mt-16">
+          <div className="mt-12">
             <h2 className="text-2xl font-bold text-secondary mb-8 font-cooper-std">Related Products</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (

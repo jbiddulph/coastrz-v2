@@ -10,8 +10,17 @@ import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 import { colors } from '@/utils/colors';
 import { Product, ProductImage, ImageFile } from '@/types/types';
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface ProductWithImages extends Product {
   product_images: ProductImage[];
+  category_id?: string;
+  quantity: number;
+  status: 'in_stock' | 'sold_out' | 'hidden';
 }
 
 interface ProductsProps {
@@ -45,9 +54,13 @@ export default function Products({ userId }: ProductsProps) {
   const [cost, setCost] = useState('');
   const [images, setImages] = useState<ImageFile[]>([]);
 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+
   useEffect(() => {
     fetchTotalProducts();
     fetchProducts();
+    fetchCategories();
   }, [currentPage, searchQuery, sortField, sortOrder]);
 
   const fetchTotalProducts = async () => {
@@ -90,6 +103,20 @@ export default function Products({ userId }: ProductsProps) {
       toast.error('Error fetching products');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data);
+    } catch (error) {
+      toast.error('Error fetching categories');
     }
   };
 
@@ -191,11 +218,12 @@ export default function Products({ userId }: ProductsProps) {
   // Set form fields for editing
   const setEditForm = (product: ProductWithImages) => {
     setName(product.name);
-    setDescription(product.description);
-    setSize(product.size || '');
-    setColor(product.color || '');
-    setGender(product.gender || '');
+    setDescription(product.description || '');
+    setSize(product.size ?? '');
+    setColor(product.color ?? '');
+    setGender((product.gender ?? '') as 'male' | 'female' | 'unisex' | '');
     setCost(product.cost.toString());
+    setSelectedCategory(product.category_id === null ? '' : (product.category_id || ''));
     setImages([]);
   };
 
@@ -208,96 +236,175 @@ export default function Products({ userId }: ProductsProps) {
 
   // Handle delete
   const handleDelete = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+    if (!confirm('Are you sure you want to delete this product? This will also remove it from any orders it appears in.')) return;
 
     try {
-      const { error } = await supabase
+      // First, delete any order items that reference this product
+      const { error: orderItemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('product_id', productId);
+
+      if (orderItemsError) throw orderItemsError;
+
+      // Then fetch the product to get its main image
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .single();
+
+      if (productError) throw productError;
+
+      // Delete main product image from storage if it exists
+      if (product?.image_url) {
+        const mainImagePath = product.image_url.split('/').pop();
+        if (mainImagePath) {
+          const { error: mainImageError } = await supabase.storage
+            .from('products')
+            .remove([mainImagePath]);
+          
+          if (mainImageError) {
+            console.error('Error deleting main image from storage:', mainImageError);
+          }
+        }
+      }
+
+      // Fetch all additional images associated with this product
+      const { data: productImages, error: fetchError } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', productId);
+
+      if (fetchError) throw fetchError;
+
+      // Delete additional images from storage if they exist
+      if (productImages && productImages.length > 0) {
+        for (const image of productImages) {
+          if (image.image_url) {
+            const path = image.image_url.split('/').pop();
+            if (path) {
+              const { error: storageError } = await supabase.storage
+                .from('products')
+                .remove([path]);
+              
+              if (storageError) {
+                console.error('Error deleting additional image from storage:', storageError);
+              }
+            }
+          }
+        }
+
+        // Delete image records from the database
+        const { error: deleteImagesError } = await supabase
+          .from('product_images')
+          .delete()
+          .eq('product_id', productId);
+
+        if (deleteImagesError) throw deleteImagesError;
+      }
+
+      // Finally, delete the product itself
+      const { error: deleteProductError } = await supabase
         .from('products')
         .delete()
         .eq('id', productId)
         .eq('user_id', userId); // Ensure user owns the product
 
-      if (error) throw error;
+      if (deleteProductError) throw deleteProductError;
 
-      toast.success('Product deleted successfully');
+      toast.success('Product and all associated data deleted successfully');
       fetchProducts();
     } catch (error) {
-      toast.error('Error deleting product');
+      console.error('Error deleting product:', error);
+      toast.error('Error deleting product and associated data');
     }
+  };
+
+  // Add slug generation function
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
   };
 
   // Handle update
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId || !editingProduct) return;
+    if (!editingProduct) return;
 
-    const productToUpdate = editingProduct;
-    setLoading(true);
     try {
-      // Upload all new images
-      const uploadedImages: { url: string; isPrimary: boolean }[] = [];
+      // First, upload any new images
+      const uploadedImageUrls: string[] = [];
       for (const image of images) {
-        const imageUrl = await uploadImage(image.file);
-        if (imageUrl) {
-          uploadedImages.push({
-            url: imageUrl,
-            isPrimary: image.isPrimary
-          });
+        if (image.file) {
+          const imageUrl = await uploadImage(image.file);
+          if (imageUrl) {
+            uploadedImageUrls.push(imageUrl);
+          }
         }
       }
 
-      // Update the product with the primary image
-      const primaryImage = uploadedImages.find(img => img.isPrimary);
-      const { error: productError } = await supabase
+      // Find primary image URL
+      const primaryImageUrl = images.find(img => img.isPrimary)?.preview;
+      const currentImageUrl = editingProduct.image_url === null ? undefined : editingProduct.image_url;
+      const finalImageUrl = primaryImageUrl || currentImageUrl;
+
+      // Determine status based on quantity
+      let newStatus = editingProduct.status;
+      if (editingProduct.quantity === 0 && editingProduct.status === 'in_stock') {
+        newStatus = 'sold_out';
+      } else if (editingProduct.quantity > 0 && editingProduct.status === 'sold_out') {
+        newStatus = 'in_stock';
+      }
+
+      // Generate new slug if name has changed
+      const slug = name !== editingProduct.name ? generateSlug(name) : editingProduct.slug;
+
+      // Update the product basic info
+      const updates = {
+        name,
+        slug,
+        description,
+        size: size || undefined,
+        color: color || undefined,
+        gender: gender || undefined,
+        cost: parseFloat(cost),
+        category_id: selectedCategory || undefined,
+        image_url: finalImageUrl,
+        quantity: editingProduct.quantity,
+        status: newStatus
+      };
+
+      const { error: updateError } = await supabase
         .from('products')
-        .update({
-          name,
-          description,
-          size: size || null,
-          color: color || null,
-          gender: gender || null,
-          cost: parseFloat(cost),
-          image_url: primaryImage?.url || editingProduct.image_url
-        })
-        .eq('id', productToUpdate.id)
-        .eq('user_id', userId);
+        .update(updates)
+        .eq('id', editingProduct.id);
 
-      if (productError) throw productError;
+      if (updateError) throw updateError;
 
-      // Delete existing product images if there are new ones
-      if (uploadedImages.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('product_images')
-          .delete()
-          .eq('product_id', productToUpdate.id);
+      // If we have new images, add them to product_images
+      if (uploadedImageUrls.length > 0) {
+        const productImages = uploadedImageUrls.map((url, index) => ({
+          product_id: editingProduct.id,
+          image_url: url,
+          is_primary: index === 0 && !editingProduct.image_url
+        }));
 
-        if (deleteError) throw deleteError;
-
-        // Insert new product images
         const { error: imagesError } = await supabase
           .from('product_images')
-          .insert(
-            uploadedImages.map((img, index) => ({
-              product_id: productToUpdate.id,
-              image_url: img.url,
-              display_order: index + 1,
-              is_primary: img.isPrimary
-            }))
-          );
+          .insert(productImages);
 
         if (imagesError) throw imagesError;
       }
 
-      toast.success('Product updated successfully!');
+      toast.success('Product updated successfully');
       setShowEditModal(false);
-      setEditingProduct(null);
-      resetForm();
       fetchProducts();
-    } catch (error) {
-      console.error('Error updating product:', error);
-      toast.error('Error updating product');
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      console.error('Update error:', error);
+      toast.error(`Error updating product: ${error.message}`);
     }
   };
 
@@ -313,17 +420,22 @@ export default function Products({ userId }: ProductsProps) {
         if (!imageUrl) return;
       }
 
+      const slug = generateSlug(name);
+
       const { error } = await supabase
         .from('products')
         .insert([{
           user_id: userId,
           name,
+          slug,
           description,
           size: size || null,
           color: color || null,
           gender: gender || null,
           cost: parseFloat(cost),
-          image_url: imageUrl
+          image_url: imageUrl,
+          quantity: 1,
+          status: 'in_stock'
         }]);
 
       if (error) throw error;
@@ -445,16 +557,34 @@ export default function Products({ userId }: ProductsProps) {
                       key={product.id}
                       className="bg-neutral rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
                     >
-                      <ImageCarousel
-                        images={product.product_images || []}
-                        mainImage={product.image_url}
-                      />
+                      <div className="relative">
+                        <ImageCarousel
+                          images={product.product_images || []}
+                          mainImage={product.image_url || undefined}
+                        />
+                        <div className="absolute top-2 left-2 flex flex-col gap-2">
+                          {product.categories?.name && (
+                            <span className="px-3 py-1 bg-primary text-white rounded-full text-sm">
+                              {product.categories.name}
+                            </span>
+                          )}
+                          <span className={`px-3 py-1 rounded-full text-sm ${
+                            product.status === 'sold_out' 
+                              ? 'bg-red-500 text-white' 
+                              : product.status === 'hidden'
+                              ? 'bg-gray-500 text-white'
+                              : 'bg-green-500 text-white'
+                          }`}>
+                            {product.status === 'in_stock' ? 'In Stock' : product.status === 'sold_out' ? 'Sold Out' : 'Hidden'}
+                          </span>
+                        </div>
+                      </div>
                       <div className="p-4">
                         <div className="flex-1">
                           <h3 className="text-lg font-medium text-secondary">{product.name}</h3>
                           <p className="text-primary font-bold">£{product.cost.toFixed(2)}</p>
                         </div>
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center mt-2">
                           <div className="space-x-2">
                             <button
                               onClick={() => handleEdit(product)}
@@ -491,6 +621,9 @@ export default function Products({ userId }: ProductsProps) {
                               Name
                               {renderSortIcon('name')}
                             </span>
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                            Status
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                             Description
@@ -538,6 +671,17 @@ export default function Products({ userId }: ProductsProps) {
                               <div className="text-sm font-medium text-secondary">
                                 {product.name}
                               </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                product.status === 'sold_out' 
+                                  ? 'bg-red-100 text-red-800' 
+                                  : product.status === 'hidden'
+                                  ? 'bg-gray-100 text-gray-800'
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {product.status === 'in_stock' ? 'In Stock' : product.status === 'sold_out' ? 'Sold Out' : 'Hidden'}
+                              </span>
                             </td>
                             <td className="px-6 py-4">
                               <div className="text-sm text-secondary-light line-clamp-2">
@@ -605,24 +749,11 @@ export default function Products({ userId }: ProductsProps) {
       )}
 
       {/* Edit Modal */}
-      {showEditModal && (
-        <div className="z-50 fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="bg-neutral rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-secondary">Edit Product</h2>
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setEditingProduct(null);
-                  resetForm();
-                }}
-                className="text-secondary hover:text-primary p-1 rounded-full hover:bg-primary-light transition-colors"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleUpdate} className="flex flex-col gap-4">
+      {showEditModal && editingProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Edit Product</h2>
+            <form onSubmit={handleUpdate} className="space-y-4">
               <div>
                 <label className="block mb-2 text-secondary">Name *</label>
                 <input
@@ -695,6 +826,58 @@ export default function Products({ userId }: ProductsProps) {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2 text-secondary">Quantity *</label>
+                  <input
+                    type="number"
+                    value={editingProduct.quantity}
+                    onChange={(e) => setEditingProduct(prev => prev ? {
+                      ...prev,
+                      quantity: parseInt(e.target.value)
+                    } : null)}
+                    required
+                    min="0"
+                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-secondary">Status *</label>
+                  <select
+                    value={editingProduct.status}
+                    onChange={(e) => setEditingProduct(prev => prev ? {
+                      ...prev,
+                      status: e.target.value as 'in_stock' | 'sold_out' | 'hidden'
+                    } : null)}
+                    required
+                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="in_stock">In Stock</option>
+                    <option value="sold_out">Sold Out</option>
+                    <option value="hidden">Hidden</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block mb-2 text-secondary">Product Images</label>
                 <input
@@ -711,7 +894,7 @@ export default function Products({ userId }: ProductsProps) {
                     <h4 className="text-sm font-medium text-secondary mb-2">Current Images</h4>
                     <div className="grid grid-cols-4 gap-4">
                       {editingProduct.product_images.map((img) => (
-                        <div key={img.id} className="relative">
+                        <div key={img.id} className="relative group">
                           <img
                             src={img.image_url}
                             alt="Product image"
@@ -724,6 +907,51 @@ export default function Products({ userId }: ProductsProps) {
                               Primary
                             </span>
                           )}
+                          <button
+                            onClick={async () => {
+                              if (window.confirm('Are you sure you want to delete this image?')) {
+                                try {
+                                  // Extract the filename from the URL
+                                  const urlParts = img.image_url.split('/');
+                                  const fileName = urlParts[urlParts.length - 1];
+                                  
+                                  // Delete from storage if it's a Supabase storage URL
+                                  if (!img.image_url.includes('http://') && !img.image_url.includes('https://')) {
+                                    const { error: storageError } = await supabase.storage
+                                      .from('products')
+                                      .remove([`${fileName}`]);
+
+                                    if (storageError) {
+                                      console.error('Storage delete error:', storageError);
+                                    }
+                                  }
+
+                                  // Delete from database
+                                  const { error: dbError } = await supabase
+                                    .from('product_images')
+                                    .delete()
+                                    .eq('id', img.id);
+
+                                  if (dbError) throw dbError;
+
+                                  // Update the editingProduct state to remove the deleted image
+                                  setEditingProduct(prev => prev ? {
+                                    ...prev,
+                                    product_images: prev.product_images.filter(image => image.id !== img.id)
+                                  } : null);
+
+                                  toast.success('Image deleted successfully');
+                                } catch (error) {
+                                  console.error('Delete error:', error);
+                                  toast.error('Error deleting image');
+                                }
+                              }
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Delete image"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
                         </div>
                       ))}
                     </div>

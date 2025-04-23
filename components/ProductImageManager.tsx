@@ -86,21 +86,29 @@ export default function ProductImageManager({ productId }: ProductImageManagerPr
 
   const deleteImage = async (imageId: string, imageUrl: string) => {
     try {
-      // Delete from storage
-      const filePath = imageUrl.split('/').pop();
-      if (filePath) {
-        await supabase.storage
+      // Extract the filename from the URL
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      
+      // Delete from storage if it's a Supabase storage URL
+      if (!imageUrl.includes('http://') && !imageUrl.includes('https://')) {
+        const { error: storageError } = await supabase.storage
           .from('products')
-          .remove([`products/${productId}/${filePath}`]);
+          .remove([`${fileName}`]);
+
+        if (storageError) {
+          console.error('Storage delete error:', storageError);
+          // Continue with database deletion even if storage deletion fails
+        }
       }
 
       // Delete from database
-      const { error } = await supabase
+      const { error: dbError } = await supabase
         .from('product_images')
         .delete()
         .eq('id', imageId);
 
-      if (error) throw error;
+      if (dbError) throw dbError;
 
       toast.success('Image deleted successfully');
       fetchImages();
@@ -175,13 +183,23 @@ export default function ProductImageManager({ productId }: ProductImageManagerPr
                 alt="Product"
                 className="absolute inset-0 w-full h-full object-cover"
               />
-              {image.is_primary && (
-                <div className="absolute top-2 left-2 bg-yellow-400 rounded-full p-1" title="Primary Image">
-                  <StarIcon className="h-4 w-4 text-white" />
-                </div>
-              )}
-              <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full">
-                {index + 1}
+              <div className="absolute top-2 right-2 flex items-center gap-2">
+                {image.is_primary && (
+                  <div className="bg-yellow-400 rounded-full p-1" title="Primary Image">
+                    <StarIcon className="h-4 w-4 text-white" />
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete this image?')) {
+                      deleteImage(image.id, image.image_url);
+                    }
+                  }}
+                  className="bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
+                  title="Delete image"
+                >
+                  <XCircleIcon className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
@@ -195,31 +213,26 @@ export default function ProductImageManager({ productId }: ProductImageManagerPr
                   <StarIcon className="h-5 w-5 text-white" />
                 </button>
               )}
-              {index > 0 && (
-                <button
-                  onClick={() => updateDisplayOrder(image.id, image.display_order - 1)}
-                  className="p-1 bg-white rounded-full hover:bg-gray-100 transition-colors"
-                  title="Move up in order"
-                >
-                  <ArrowUpIcon className="h-5 w-5 text-gray-600" />
-                </button>
-              )}
-              {index < images.length - 1 && (
-                <button
-                  onClick={() => updateDisplayOrder(image.id, image.display_order + 1)}
-                  className="p-1 bg-white rounded-full hover:bg-gray-100 transition-colors"
-                  title="Move down in order"
-                >
-                  <ArrowDownIcon className="h-5 w-5 text-gray-600" />
-                </button>
-              )}
-              <button
-                onClick={() => deleteImage(image.id, image.image_url)}
-                className="p-1 bg-red-500 rounded-full hover:bg-red-600 transition-colors"
-                title="Delete image"
-              >
-                <XCircleIcon className="h-5 w-5 text-white" />
-              </button>
+              <div className="flex gap-2">
+                {index > 0 && (
+                  <button
+                    onClick={() => updateDisplayOrder(image.id, image.display_order - 1)}
+                    className="p-1 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                    title="Move up"
+                  >
+                    <ArrowUpIcon className="h-5 w-5 text-gray-700" />
+                  </button>
+                )}
+                {index < images.length - 1 && (
+                  <button
+                    onClick={() => updateDisplayOrder(image.id, image.display_order + 1)}
+                    className="p-1 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                    title="Move down"
+                  >
+                    <ArrowDownIcon className="h-5 w-5 text-gray-700" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}

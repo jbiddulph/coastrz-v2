@@ -13,7 +13,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        redirect('/');
+        redirect('/login');
       } else {
         setUser({ email: user.email || '' });
       }

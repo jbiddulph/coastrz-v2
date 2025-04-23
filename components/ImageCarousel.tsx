@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
-import { ProductImage } from '@/types/product';
+import { ProductImage } from '@/types/types';
+import { createClient } from '@/utils/supabase/client';
 
 interface ImageCarouselProps {
   images: ProductImage[];
@@ -9,6 +10,7 @@ interface ImageCarouselProps {
 
 export default function ImageCarousel({ images, mainImage }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const supabase = createClient();
   
   // Sort images by display_order and find primary image
   const sortedImages = [...images].sort((a, b) => a.display_order - b.display_order);
@@ -22,6 +24,21 @@ export default function ImageCarousel({ images, mainImage }: ImageCarouselProps)
     : mainImage 
       ? [{ id: 'main', product_id: '', image_url: mainImage, display_order: 0, is_primary: true }, ...sortedImages]
       : sortedImages;
+
+  const getImageUrl = (imageUrl: string) => {
+    if (!imageUrl) return '/placeholder.png';
+    
+    // If it's already a full URL (including our Supabase storage URL), return as is
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    // If it's a storage path, get the public URL
+    const storagePath = imageUrl.startsWith('products/') ? imageUrl : `products/${imageUrl}`;
+    const { data } = supabase.storage
+      .from('products')
+      .getPublicUrl(storagePath);
+    
+    return data?.publicUrl || '/placeholder.png';
+  };
 
   const nextImage = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % allImages.length);
@@ -46,7 +63,7 @@ export default function ImageCarousel({ images, mainImage }: ImageCarouselProps)
   return (
     <div className="relative pb-[100%] group">
       <img
-        src={allImages[currentIndex].image_url}
+        src={getImageUrl(allImages[currentIndex]?.image_url)}
         alt="Product image"
         className="absolute inset-0 w-full h-full object-cover"
       />
@@ -54,14 +71,20 @@ export default function ImageCarousel({ images, mainImage }: ImageCarouselProps)
       {allImages.length > 1 && (
         <>
           <button
-            onClick={previousImage}
-            className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.preventDefault();
+              previousImage();
+            }}
+            className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-80"
             aria-label="Previous image"
           >
             <ChevronLeftIcon className="h-6 w-6" />
           </button>
           <button
-            onClick={nextImage}
+            onClick={(e) => {
+              e.preventDefault();
+              nextImage();
+            }}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
             aria-label="Next image"
           >
@@ -71,7 +94,10 @@ export default function ImageCarousel({ images, mainImage }: ImageCarouselProps)
             {allImages.map((_, index) => (
               <button
                 key={index}
-                onClick={() => setCurrentIndex(index)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentIndex(index);
+                }}
                 className={`w-2 h-2 rounded-full transition-colors ${
                   index === currentIndex ? 'bg-white' : 'bg-white/50'
                 }`}

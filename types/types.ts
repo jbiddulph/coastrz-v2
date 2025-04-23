@@ -1,16 +1,23 @@
 export interface Product {
   id: string
   name: string
-  description: string
-  size?: string
-  color?: string
-  gender?: 'male' | 'female' | 'unisex'
+  description: string | null
+  size: string | null
+  color: string | null
+  gender: string | null
   cost: number
-  image_url?: string
-  created_at?: string
-  updated_at?: string
-  user_id?: string
+  image_url: string | null
+  created_at: string
+  updated_at: string
+  user_id: string | null
   product_images?: ProductImage[]
+  categories?: {
+    id: string
+    name: string
+    slug: string
+  }[]
+  slug: string
+  quantity: number
 }
 
 export interface ProductImage {

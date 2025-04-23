@@ -4,12 +4,15 @@ import { Inter } from 'next/font/google'
 import { Toaster } from 'react-hot-toast';
 import { CartProvider } from '@/contexts/CartContext';
 import Footer from '@/components/Footer';
+import { Providers } from './providers';
+import Navbar from '@/components/Navbar';
+import { headers } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Shop - Your Online Store',
-  description: 'Find the best products at great prices',
+  title: 'MCP Store',
+  description: 'Your one-stop shop for all your needs',
 }
 
 export default function RootLayout({
@@ -17,6 +20,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Get the current pathname from headers
+  const headersList = headers();
+  const pathname = headersList.get("x-pathname") || "";
+  const isAdminRoute = pathname.startsWith('/admin');
+
   return (
     <html lang="en">
       <head>
@@ -43,15 +51,18 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <CartProvider>
-          <div className="min-h-screen flex flex-col">
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-          </div>
+        <Providers>
+          <CartProvider>
+            <div className="flex min-h-screen flex-col">
+              {!isAdminRoute && <Navbar />}
+              <main className="flex-grow">
+                {children}
+              </main>
+              {!isAdminRoute && <Footer />}
+            </div>
+          </CartProvider>
           <Toaster position="bottom-right" />
-        </CartProvider>
+        </Providers>
       </body>
     </html>
   )

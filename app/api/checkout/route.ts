@@ -188,12 +188,12 @@ export async function POST(req: Request) {
         customer_email: userId ? undefined : shippingAddress.email,
         metadata: {
           order_id: orderId,
-          user_id: userId
+          user_id: userId || 'guest'
         },
         payment_intent_data: {
           metadata: {
             order_id: orderId,
-            user_id: userId
+            user_id: userId || 'guest'
           }
         }
       });

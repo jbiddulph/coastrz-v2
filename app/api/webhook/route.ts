@@ -22,84 +22,31 @@ const stripe = new Stripe(requiredEnvVars.STRIPE_SECRET_KEY, {
   apiVersion: '2025-03-31.basil' as any,
 });
 
+// Create Supabase admin client
+const supabaseAdmin = createClient(
+  requiredEnvVars.NEXT_PUBLIC_SUPABASE_URL,
+  requiredEnvVars.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export async function POST(req: Request) {
   const body = await req.text();
-  const signature = headers().get('stripe-signature')!;
+  const signature = headers().get('stripe-signature');
 
-  let event: Stripe.Event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      requiredEnvVars.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    return new Response(
-      JSON.stringify({
-        error: {
-          message: `Webhook Error: ${err instanceof Error ? err.message : 'Unknown Error'}`,
-        },
-      }),
+  if (!signature) {
+    return NextResponse.json(
+      { error: 'No signature provided' },
       { status: 400 }
     );
   }
 
-  // Create Supabase client with service role key
-  const supabase = createClient(
-    requiredEnvVars.NEXT_PUBLIC_SUPABASE_URL,
-    requiredEnvVars.SUPABASE_SERVICE_ROLE_KEY
-  );
+  try {
+    const event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      requiredEnvVars.STRIPE_WEBHOOK_SECRET
+    );
 
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Checkout.Session;
-      
-      try {
-        // Update order status to confirmed
-        const { error: orderError } = await supabase
-          .from('orders')
-          .update({ status: 'confirmed' })
-          .eq('stripe_session_id', session.id);
-
-        if (orderError) {
-          console.error('Error updating order status:', orderError);
-          throw orderError;
-        }
-
-        // For guest checkouts, create order in database
-        if (!session.customer) {
-          // Create order logic here
-        }
-
-        // Update delivery address
-        const shippingAddress = (session as any).shipping_details?.address;
-        if (shippingAddress) {
-          const { error: addressError } = await supabase
-            .from('delivery_addresses')
-            .update({
-              line1: shippingAddress.line1 || '',
-              line2: shippingAddress.line2 || '',
-              city: shippingAddress.city || '',
-              state: shippingAddress.state || '',
-              postal_code: shippingAddress.postal_code || '',
-              country: shippingAddress.country || '',
-            })
-            .eq('order_id', session.metadata?.order_id);
-
-          if (addressError) {
-            console.error('Error updating delivery address:', addressError);
-            throw addressError;
-          }
-        }
-      } catch (error) {
-        console.error('Error processing checkout.session.completed:', error);
-        throw error;
-      }
-      break;
-    }
-
-    case 'checkout.session.expired': {
+    if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const orderId = session.metadata?.order_id;
 
@@ -107,30 +54,44 @@ export async function POST(req: Request) {
         throw new Error('No order ID in session metadata');
       }
 
-      try {
-        // Update order status to expired
-        const { error: orderError } = await supabase
-          .from('orders')
-          .update({ 
-            status: 'expired',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
+      // Get order items for this order
+      const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+        .from('order_items')
+        .select('product_id')
+        .eq('order_id', orderId);
 
-        if (orderError) {
-          console.error('Error updating order status to expired:', orderError);
-          throw orderError;
-        }
-      } catch (error) {
-        console.error('Error processing checkout.session.expired:', error);
-        throw error;
+      if (orderItemsError) {
+        throw orderItemsError;
       }
-      break;
+
+      // Mark each product as sold out
+      const productIds = orderItems.map(item => item.product_id);
+      const { error: updateError } = await supabaseAdmin
+        .from('products')
+        .update({ status: 'sold_out' })
+        .in('id', productIds);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Update order status to completed
+      const { error: orderUpdateError } = await supabaseAdmin
+        .from('orders')
+        .update({ status: 'completed' })
+        .eq('id', orderId);
+
+      if (orderUpdateError) {
+        throw orderUpdateError;
+      }
     }
 
-    default:
-      console.log(`Unhandled event type: ${event.type}`);
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return NextResponse.json(
+      { error: 'Webhook handler failed' },
+      { status: 400 }
+    );
   }
-
-  return NextResponse.json({ received: true });
 } 

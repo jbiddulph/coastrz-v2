@@ -29,7 +29,9 @@ export async function GET(
       .from('orders')
       .select(`
         *,
-        delivery_addresses (*),
+        delivery_addresses!order_id (
+          *
+        ),
         order_items (
           *,
           product:products (
@@ -41,13 +43,21 @@ export async function GET(
       .eq('id', params.id)
       .single();
 
-    if (orderError) throw orderError;
+    if (orderError) {
+      console.error('Order Error:', orderError);
+      throw orderError;
+    }
 
     if (!orderData) {
       return NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
       );
+    }
+
+    // Transform delivery_addresses from array to single object
+    if (Array.isArray(orderData.delivery_addresses) && orderData.delivery_addresses.length > 0) {
+      orderData.delivery_addresses = orderData.delivery_addresses[0];
     }
 
     // Fetch user email if user_id exists
@@ -62,6 +72,8 @@ export async function GET(
         orderData.user_email = userData.email;
       }
     }
+
+    console.log('Order Data:', orderData); // Add this for debugging
 
     return NextResponse.json(orderData);
   } catch (error: any) {
@@ -88,17 +100,55 @@ export async function PATCH(
       );
     }
 
-    const { data: orderData, error: orderError } = await supabaseAdmin
+    // First update the order
+    const { error: updateError } = await supabaseAdmin
       .from('orders')
       .update({ 
         status,
         updated_at: new Date().toISOString()
       })
+      .eq('id', params.id);
+
+    if (updateError) throw updateError;
+
+    // Then fetch the complete updated order data
+    const { data: orderData, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        delivery_addresses!order_id (
+          *
+        ),
+        order_items (
+          *,
+          product:products (
+            name,
+            image_url
+          )
+        )
+      `)
       .eq('id', params.id)
-      .select()
       .single();
 
     if (orderError) throw orderError;
+
+    // Transform delivery_addresses from array to single object
+    if (Array.isArray(orderData.delivery_addresses) && orderData.delivery_addresses.length > 0) {
+      orderData.delivery_addresses = orderData.delivery_addresses[0];
+    }
+
+    // Fetch user email if user_id exists
+    if (orderData.user_id) {
+      const { data: userData, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('email')
+        .eq('id', orderData.user_id)
+        .single();
+
+      if (!userError && userData) {
+        orderData.user_email = userData.email;
+      }
+    }
 
     return NextResponse.json(orderData);
   } catch (error: any) {

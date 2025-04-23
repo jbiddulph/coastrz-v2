@@ -5,6 +5,7 @@ import { useCart } from '@/contexts/CartContext';
 import { getStripe } from '@/utils/stripe';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import ShippingAddressForm from './ShippingAddressForm';
+import { MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 interface ShippingAddress {
   full_name: string;
@@ -110,21 +111,41 @@ export default function ShoppingCart() {
               <h3 className="font-medium text-secondary">{item.name}</h3>
               <p className="text-sm text-secondary-light">£{item.cost.toFixed(2)} each</p>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="1"
-                value={item.quantity}
-                onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
-                className="w-16 p-1 border border-secondary-border rounded text-center"
-              />
-              <button
-                onClick={() => removeItem(item.id)}
-                className="p-1 text-danger hover:text-hover-danger"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
+            <div className="flex items-center">
+              {item.quantity === 1 ? (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Only 1 available
+                </span>
+              ) : (
+                <>
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                      item.quantity <= 1 ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={item.quantity <= 1}
+                  >
+                    <MinusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  </button>
+                  <span className="mx-2 min-w-[2rem] text-center">{item.quantity}</span>
+                  <button
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                      item.quantity >= 10 ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={item.quantity >= 10}
+                  >
+                    <PlusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  </button>
+                </>
+              )}
             </div>
+            <button
+              onClick={() => removeItem(item.id)}
+              className="p-1 text-danger hover:text-hover-danger"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
           </div>
         ))}
       </div>
