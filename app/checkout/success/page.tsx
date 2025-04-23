@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCartStore } from '@/store/cart';
-import { Navbar } from '@/components/Navbar';
+import Navbar from '@/components/Navbar';
 
 export default function CheckoutSuccess() {
   const searchParams = useSearchParams();
