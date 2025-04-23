@@ -46,18 +46,20 @@ export default function ShoppingCart() {
 
       const { sessionId } = data;
 
-      // Redirect to Stripe checkout
+      // Initialize Stripe
       const stripe = await getStripe();
       if (!stripe) {
-        throw new Error('Failed to load Stripe');
+        throw new Error('Failed to initialize Stripe');
       }
 
+      // Redirect to Stripe checkout
       const { error: stripeError } = await stripe.redirectToCheckout({
         sessionId,
       });
 
       if (stripeError) {
-        throw new Error(stripeError.message);
+        console.error('Stripe redirect error:', stripeError);
+        throw new Error(stripeError.message || 'Error redirecting to checkout');
       }
     } catch (error) {
       console.error('Checkout error:', error);

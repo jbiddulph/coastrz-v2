@@ -2,20 +2,18 @@ import { loadStripe } from '@stripe/stripe-js';
 
 // This is a singleton to ensure we only create one instance
 let stripePromise: Promise<any> | null = null;
-let currentKey: string | null = null;
 
-export const getStripe = () => {
-  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!;
-  
-  // If the key has changed, clear the singleton
-  if (currentKey && currentKey !== key) {
-    stripePromise = null;
-  }
-  
+export const getStripe = async () => {
   if (!stripePromise) {
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!key) {
+      throw new Error('Stripe publishable key is not set');
+    }
+    
+    // Force clear any existing instances
+    stripePromise = null;
+    // Create a new instance with the current key
     stripePromise = loadStripe(key);
-    currentKey = key;
   }
-  
   return stripePromise;
 }; 
