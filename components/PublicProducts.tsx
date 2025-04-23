@@ -10,10 +10,14 @@ import { toast } from 'react-hot-toast';
 import ShoppingCart from './ShoppingCart';
 import Link from 'next/link';
 import QuickView from './QuickView';
-import { Product, ProductImage } from '@/types/types';
+import { Product as ProductType, ProductImage } from '@/types/types';
+import ImageCarousel from './ImageCarousel';
+import Image from 'next/image';
 
-type SortField = 'name' | 'size' | 'cost';
+type SortField = 'name' | 'cost' | 'created_at' | 'size';
 type SortOrder = 'asc' | 'desc';
+
+type Product = ProductType;
 
 export default function PublicProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -29,21 +33,35 @@ export default function PublicProducts() {
     minPrice: '',
     maxPrice: '',
     size: '',
-    color: ''
+    color: '',
+    category: '',
+    status: 'in_stock'
   });
-  const { addItem } = useCart();
-  const [showCart, setShowCart] = useState(false);
+  const { addItem, items } = useCart();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quickViewImages, setQuickViewImages] = useState<ProductImage[]>([]);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
 
   const ITEMS_PER_PAGE = 12;
   const supabase = createClient();
 
   useEffect(() => {
+    fetchCategories();
     fetchTotalProducts();
     fetchProducts();
   }, [currentPage, searchQuery, sortField, sortOrder, filters]);
+
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name');
+
+    if (!error && data) {
+      setCategories(data);
+    }
+  };
 
   const fetchTotalProducts = async () => {
     let query = supabase
@@ -69,6 +87,12 @@ export default function PublicProducts() {
     if (filters.maxPrice) {
       query = query.lte('cost', parseFloat(filters.maxPrice));
     }
+    if (filters.category) {
+      query = query.eq('category_id', filters.category);
+    }
+    if (filters.status) {
+      query = query.eq('status', filters.status);
+    }
 
     const { count, error } = await query;
 
@@ -81,17 +105,25 @@ export default function PublicProducts() {
     setLoading(true);
     let query = supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        product_images (*),
+        categories (
+          id,
+          name,
+          slug
+        )
+      `)
       .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
 
     // Apply filters
     if (searchQuery) {
       query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
     }
-    if (filters.gender) {
+    if (filters.gender && filters.gender !== 'all') {
       query = query.eq('gender', filters.gender);
     }
-    if (filters.size) {
+    if (filters.size && filters.size !== 'all') {
       query = query.eq('size', filters.size);
     }
     if (filters.color) {
@@ -102,6 +134,12 @@ export default function PublicProducts() {
     }
     if (filters.maxPrice) {
       query = query.lte('cost', parseFloat(filters.maxPrice));
+    }
+    if (filters.category && filters.category !== 'all') {
+      query = query.eq('category_id', filters.category);
+    }
+    if (filters.status && filters.status !== '') {
+      query = query.eq('status', filters.status);
     }
 
     // Add sorting
@@ -114,18 +152,13 @@ export default function PublicProducts() {
 
     const { data, error } = await query;
 
-    if (!error && data) {
-      // If sorting by size, do additional client-side sorting
-      if (sortField === 'size') {
-        const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-        data.sort((a, b) => {
-          const aIndex = sizeOrder.indexOf(a.size || '');
-          const bIndex = sizeOrder.indexOf(b.size || '');
-          if (aIndex === -1) return 1;
-          if (bIndex === -1) return -1;
-          return sortOrder === 'asc' ? aIndex - bIndex : bIndex - aIndex;
-        });
-      }
+    if (error) {
+      console.error('Error fetching products:', error);
+      return;
+    }
+
+    if (data) {
+      console.log('Fetched products:', data.length);
       setProducts(data);
     }
     setLoading(false);
@@ -156,19 +189,23 @@ export default function PublicProducts() {
       minPrice: '',
       maxPrice: '',
       size: '',
-      color: ''
+      color: '',
+      category: '',
+      status: 'in_stock'
     });
     setCurrentPage(1);
   };
 
-  const renderFilterBadge = (label: string, value: string | undefined, filterType: 'size' | 'color' | 'gender') => {
+  const renderFilterBadge = (label: string, value: string | undefined | null, filterType: 'size' | 'color' | 'gender') => {
     if (!value) return null;
     
     const isActive = filters[filterType] === value;
     
     return (
       <button
-        onClick={() => {
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
           if (isActive) {
             handleFilterChange(filterType, '');
           } else {
@@ -179,7 +216,7 @@ export default function PublicProducts() {
         className={`text-xs px-2 py-1 rounded-full transition-colors ${
           isActive 
             ? 'bg-primary text-white hover:bg-hover-primary' 
-            : 'bg-neutral hover:bg-primary hover:text-white'
+            : 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600'
         }`}
       >
         {label}: {value}
@@ -208,211 +245,283 @@ export default function PublicProducts() {
     }
   };
 
+  const handleAddToCart = (product: Product, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Check if product is already in cart
+    const isInCart = items.some(item => item.id === product.id);
+    
+    if (product.quantity === 1 && isInCart) {
+      toast.error('This item is already in your cart');
+      return;
+    }
+    
+    addItem(product);
+    toast.success('Added to cart');
+  };
+
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = !searchQuery || product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !filters.category || filters.category === 'all' || 
+      (product.categories && Array.isArray(product.categories) && product.categories.some(cat => cat.id === filters.category));
+    const matchesGender = !filters.gender || filters.gender === 'all' || product.gender === filters.gender;
+    return matchesSearch && matchesCategory && matchesGender;
+  });
+
+  const renderCategoryBadge = (category: { id: string; name: string; slug: string }) => (
+    <button
+      key={category.id}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowFilters(true);
+        handleFilterChange('category', category.id);
+      }}
+      className="absolute top-2 left-2 bg-primary text-white px-3 py-1 rounded-full text-xs font-medium hover:bg-hover-primary transition-colors z-30"
+    >
+      {category.name}
+    </button>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <h1 className="text-3xl font-bold text-secondary font-cooper-std">Our Products</h1>
-        
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-          <Search
+      <div className="flex justify-between items-center mb-6 md:flex-row flex-col">
+        <h1 className="text-4xl font-cooper-std text-primary dark:text-primary mb-4 md:mb-0">
+          Our Products
+        </h1>
+        <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
+          <Search 
             searchQuery={searchQuery}
             onSearchChange={handleSearch}
             placeholder="Search products..."
+            className="flex-1"
           />
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center justify-center px-4 py-2 bg-primary text-neutral rounded-lg hover:bg-hover-primary transition-colors"
-            >
-              <FunnelIcon className="h-5 w-5 mr-2" />
-              Filters
-            </button>
-            <button
-              onClick={() => setShowCart(!showCart)}
-              className="flex items-center justify-center px-4 py-2 bg-primary text-neutral rounded-lg hover:bg-hover-primary transition-colors relative"
-            >
-              <ShoppingBagIcon className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center justify-center px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            <FunnelIcon className="h-5 w-5 mr-2" />
+            Filters
+          </button>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="lg:flex-grow">
-          {showFilters && (
-            <div className="bg-neutral rounded-lg p-4 mb-8 shadow-md">
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Gender</label>
-                  <select
-                    value={filters.gender}
-                    onChange={(e) => handleFilterChange('gender', e.target.value)}
-                    className="w-full p-2 border border-secondary-border rounded-lg focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">All</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="unisex">Unisex</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Size</label>
-                  <select
-                    value={filters.size}
-                    onChange={(e) => handleFilterChange('size', e.target.value)}
-                    className="w-full p-2 border border-secondary-border rounded-lg focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">All</option>
-                    <option value="XS">XS</option>
-                    <option value="S">S</option>
-                    <option value="M">M</option>
-                    <option value="L">L</option>
-                    <option value="XL">XL</option>
-                    <option value="XXL">XXL</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Color</label>
-                  <input
-                    type="text"
-                    value={filters.color}
-                    onChange={(e) => handleFilterChange('color', e.target.value)}
-                    placeholder="Enter color"
-                    className="w-full p-2 border border-secondary-border rounded-lg focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Min Price</label>
-                  <input
-                    type="number"
-                    value={filters.minPrice}
-                    onChange={(e) => handleFilterChange('minPrice', e.target.value)}
-                    placeholder="Min price"
-                    min="0"
-                    step="0.01"
-                    className="w-full p-2 border border-secondary-border rounded-lg focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">Max Price</label>
-                  <input
-                    type="number"
-                    value={filters.maxPrice}
-                    onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
-                    placeholder="Max price"
-                    min="0"
-                    step="0.01"
-                    className="w-full p-2 border border-secondary-border rounded-lg focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={clearFilters}
-                  className="px-4 py-2 text-secondary hover:text-primary transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
+      {showFilters && (
+        <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gender</label>
+              <select
+                value={filters.gender}
+                onChange={(e) => handleFilterChange('gender', e.target.value)}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="all">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="unisex">Unisex</option>
+              </select>
             </div>
-          )}
-
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Size</label>
+              <select
+                value={filters.size}
+                onChange={(e) => handleFilterChange('size', e.target.value)}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="all">All</option>
+                <option value="XS">XS</option>
+                <option value="S">S</option>
+                <option value="M">M</option>
+                <option value="L">L</option>
+                <option value="XL">XL</option>
+                <option value="XXL">XXL</option>
+              </select>
             </div>
-          ) : (
-            <>
-              {products.length === 0 ? (
-                <div className="flex justify-center items-center h-64 text-secondary-light text-lg">
-                  No products found
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {products.map((product) => (
-                    <div
-                      key={product.id}
-                      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-                    >
-                      <Link
-                        href={`/product/${product.id}`}
-                        className="block aspect-square relative cursor-pointer hover:opacity-90 transition-opacity"
-                      >
-                        <img
-                          src={product.image_url || '/placeholder.png'}
-                          alt={product.name}
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleQuickView(product);
-                          }}
-                          className="absolute bottom-4 right-4 p-2 bg-white bg-opacity-90 rounded-full hover:bg-opacity-100 transition-opacity"
-                        >
-                          <EyeIcon className="h-5 w-5 text-secondary" />
-                        </button>
-                      </Link>
-                      <div className="p-4">
-                        <Link href={`/product/${product.id}`} className="inline-block">
-                          <h3 className="text-lg font-semibold mb-2 text-secondary hover:text-primary transition-colors">{product.name}</h3>
-                        </Link>
-                        <p className="text-secondary-light text-sm mb-2 line-clamp-2">
-                          {product.description}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {renderFilterBadge('Size', product.size, 'size')}
-                          {renderFilterBadge('Color', product.color, 'color')}
-                          {renderFilterBadge('Gender', product.gender, 'gender')}
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-primary font-bold">
-                            £{product.cost.toFixed(2)}
-                          </span>
-                          <button
-                            onClick={() => handleQuickView(product)}
-                            className="text-primary hover:text-hover-primary"
-                          >
-                            Quick View
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          <div className="mt-8">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={Math.ceil(totalProducts / ITEMS_PER_PAGE)}
-              onPageChange={setCurrentPage}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+              <select
+                value={filters.category}
+                onChange={(e) => handleFilterChange('category', e.target.value)}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="all">All</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
+              <input
+                type="text"
+                value={filters.color}
+                onChange={(e) => handleFilterChange('color', e.target.value)}
+                placeholder="Enter color"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Min Price</label>
+              <input
+                type="number"
+                value={filters.minPrice}
+                onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                placeholder="Min price"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Price</label>
+              <input
+                type="number"
+                value={filters.maxPrice}
+                onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                placeholder="Max price"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Availability</label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="in_stock">In Stock Only</option>
+                <option value="">Show All</option>
+                <option value="sold_out">Sold Out</option>
+                <option value="hidden">Hidden</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            >
+              Clear Filters
+            </button>
           </div>
         </div>
+      )}
 
-        {showCart && (
-          <div className="lg:w-96 bg-neutral rounded-lg shadow-lg">
-            <ShoppingCart />
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {loading ? (
+          Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+            <div key={index} className="animate-pulse">
+              <div className="bg-gray-200 dark:bg-gray-700 h-64 rounded-lg mb-4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+            </div>
+          ))
+        ) : (
+          filteredProducts.map((product) => (
+            <div key={product.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+              <div className="relative aspect-square">
+                {product.categories && product.categories.length > 0 && 
+                  renderCategoryBadge(product.categories[0])
+                }
+                <Link
+                  href={`/product/${product.id}`}
+                  className="block relative h-full w-full group"
+                >
+                  <Image
+                    src={product.image_url || '/placeholder.png'}
+                    alt={product.name}
+                    className="h-full w-full object-cover object-center transition-opacity group-hover:opacity-75"
+                    fill
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100 z-20">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleQuickView(product);
+                        }}
+                        className="p-2 bg-white dark:bg-gray-700 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        aria-label="Quick View"
+                      >
+                        <EyeIcon className="h-6 w-6 text-gray-900 dark:text-gray-100" />
+                      </button>
+                      <button
+                        onClick={(e) => handleAddToCart(product, e)}
+                        className="p-2 bg-white dark:bg-gray-700 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        aria-label="Add to Cart"
+                      >
+                        <ShoppingBagIcon className="h-6 w-6 text-gray-900 dark:text-gray-100" />
+                      </button>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+              <div className="p-4 dark:bg-gray-800">
+                <Link href={`/product/${product.id}`} className="block group">
+                  <h3 className="text-lg font-semibold text-primary dark:text-gray-100 group-hover:text-primary transition-colors">
+                    {product.name}
+                  </h3>
+                  {product.description && (
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                      {product.description}
+                    </p>
+                  )}
+                </Link>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {renderFilterBadge('Size', product.size, 'size')}
+                  {renderFilterBadge('Color', product.color, 'color')}
+                  {renderFilterBadge('Gender', product.gender, 'gender')}
+                </div>
+                <div className="flex items-center justify-between mt-4">
+                  <span className="text-lg font-bold text-gray-900 dark:text-gray-100">£{product.cost.toFixed(2)}</span>
+                  <button
+                    onClick={(e) => handleAddToCart(product, e)}
+                    className={`bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-colors ${
+                      product.quantity === 1 && items.some(item => item.id === product.id)
+                        ? 'opacity-50 cursor-not-allowed'
+                        : ''
+                    }`}
+                    disabled={product.quantity === 1 && items.some(item => item.id === product.id)}
+                  >
+                    {product.quantity === 1 && items.some(item => item.id === product.id)
+                      ? 'Already in Cart'
+                      : 'Add to Cart'
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
-      {selectedProduct && (
-        <QuickView
-          isOpen={isQuickViewOpen}
-          onClose={() => setIsQuickViewOpen(false)}
-          product={selectedProduct}
-          images={quickViewImages}
-        />
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={Math.ceil(totalProducts / ITEMS_PER_PAGE)}
+        onPageChange={setCurrentPage}
+      />
+
+      <QuickView
+        isOpen={selectedProduct !== null}
+        onClose={() => setSelectedProduct(null)}
+        product={selectedProduct ? {
+          id: selectedProduct.id,
+          name: selectedProduct.name,
+          cost: selectedProduct.cost,
+          created_at: selectedProduct.created_at || new Date().toISOString(),
+          updated_at: selectedProduct.updated_at || new Date().toISOString(),
+          color: selectedProduct.color || '',
+          size: selectedProduct.size || '',
+          gender: (selectedProduct.gender as "male" | "female" | "unisex" | null) || null,
+          description: selectedProduct.description || '',
+          image_url: selectedProduct.image_url || '',
+          user_id: selectedProduct.user_id || '',
+          slug: selectedProduct.slug || ''
+        } : null}
+      />
     </div>
   );
 } 
