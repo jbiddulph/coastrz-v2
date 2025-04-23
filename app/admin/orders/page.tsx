@@ -45,19 +45,25 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/orders', {
-        // Add cache: 'no-store' to prevent caching
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/admin/orders?t=${timestamp}`, {
         cache: 'no-store',
-        // Add timestamp to prevent caching
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        next: {
+          revalidate: 0
         }
       });
+      
       if (!response.ok) {
         throw new Error('Failed to fetch orders');
       }
+      
       const data = await response.json();
+      console.log('Fetched orders:', data); // Add logging to debug
       setOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -85,6 +91,12 @@ export default function OrdersPage() {
       fetchOrders();
     }
   }, [pathname]);
+
+  // Force an immediate fetch when the refresh button is clicked
+  const handleRefresh = () => {
+    console.log('Refreshing orders...'); // Add logging to debug
+    fetchOrders();
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -114,7 +126,7 @@ export default function OrdersPage() {
       <div className="bg-primary rounded-t-lg p-4 flex justify-between items-center">
         <h2 className="text-neutral text-2xl font-bold">Orders</h2>
         <button
-          onClick={fetchOrders}
+          onClick={handleRefresh}
           className="px-4 py-2 bg-neutral text-primary rounded hover:bg-neutral-light transition-colors"
         >
           Refresh
