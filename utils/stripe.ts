@@ -1,6 +1,7 @@
-import { Stripe, loadStripe } from '@stripe/stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 
-let stripePromise: Promise<Stripe | null>;
+// This is a singleton to ensure we only create one instance
+let stripePromise: Promise<any> | null = null;
 
 export const getStripe = () => {
   if (!stripePromise) {

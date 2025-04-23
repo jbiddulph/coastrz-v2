@@ -15,13 +15,24 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('cart');
+      return savedCart ? JSON.parse(savedCart) : [];
+    }
+    return [];
+  });
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
     // Calculate total whenever items change
     const newTotal = items.reduce((sum, item) => sum + item.cost * item.quantity, 0);
     setTotal(newTotal);
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cart', JSON.stringify(items));
+    }
   }, [items]);
 
   const addItem = (product: Product) => {
