@@ -4,6 +4,7 @@ const nextConfig = {
   swcMinify: true,
   output: 'standalone',
   poweredByHeader: false,
+  distDir: '.next',
   images: {
     remotePatterns: [
       {

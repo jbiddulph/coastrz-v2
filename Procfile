@@ -1,1 +1,1 @@
-web: cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/ && node .next/standalone/server.js 
+web: cp -r .next/standalone/* . && cp -r .next/static .next/ && cp -r public . && node server.js 
