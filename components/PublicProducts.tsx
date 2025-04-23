@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Pagination from './Pagination';
 import Search from './Search';
-import { ChevronUpIcon, ChevronDownIcon, FunnelIcon, ShoppingBagIcon, EyeIcon } from '@heroicons/react/24/solid';
+import { ChevronUpIcon, ChevronDownIcon, FunnelIcon, ShoppingBagIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ShoppingCart from './ShoppingCart';
@@ -108,7 +108,7 @@ export default function PublicProducts() {
       .select(`
         *,
         product_images (*),
-        categories (
+        categories!inner (
           id,
           name,
           slug
@@ -158,7 +158,7 @@ export default function PublicProducts() {
     }
 
     if (data) {
-      console.log('Fetched products:', data.length);
+      console.log('Fetched products:', data);
       setProducts(data);
     }
     setLoading(false);
@@ -263,26 +263,36 @@ export default function PublicProducts() {
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = !searchQuery || product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !filters.category || filters.category === 'all' || 
-      (product.categories && Array.isArray(product.categories) && product.categories.some(cat => cat.id === filters.category));
+    const matchesCategory = !filters.category || filters.category === 'all' || product.category_id === filters.category;
     const matchesGender = !filters.gender || filters.gender === 'all' || product.gender === filters.gender;
     return matchesSearch && matchesCategory && matchesGender;
   });
 
-  const renderCategoryBadge = (category: { id: string; name: string; slug: string }) => (
-    <button
-      key={category.id}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setShowFilters(true);
-        handleFilterChange('category', category.id);
-      }}
-      className="absolute top-2 left-2 bg-primary text-white px-3 py-1 rounded-full text-xs font-medium hover:bg-hover-primary transition-colors z-30"
-    >
-      {category.name}
-    </button>
-  );
+  const renderCategoryBadge = (category: { id: string; name: string; slug: string }) => {
+    const isActive = filters.category === category.id;
+    
+    return (
+      <button
+        key={category.id}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (isActive) {
+            handleFilterChange('category', 'all');
+          } else {
+            handleFilterChange('category', category.id);
+          }
+        }}
+        className={`absolute top-2 left-2 px-3 py-1 rounded-full text-sm font-medium z-30 transition-all transform hover:scale-105 ${
+          isActive 
+            ? 'bg-primary text-white hover:bg-hover-primary' 
+            : 'bg-white/90 text-primary hover:bg-white'
+        }`}
+      >
+        {category.name}
+      </button>
+    );
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -384,7 +394,7 @@ export default function PublicProducts() {
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               />
             </div>
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Availability</label>
               <select
                 value={filters.status}
@@ -396,7 +406,7 @@ export default function PublicProducts() {
                 <option value="sold_out">Sold Out</option>
                 <option value="hidden">Hidden</option>
               </select>
-            </div>
+            </div> */}
           </div>
           <div className="mt-4 flex justify-end">
             <button
@@ -406,6 +416,28 @@ export default function PublicProducts() {
               Clear Filters
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Active filters display */}
+      {(filters.category !== '' && filters.category !== 'all') && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">Filtered by:</span>
+          {categories.map(cat => {
+            if (cat.id === filters.category) {
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleFilterChange('category', 'all')}
+                  className="inline-flex items-center px-3 py-1 rounded-full bg-primary text-white text-sm font-medium hover:bg-hover-primary"
+                >
+                  {cat.name}
+                  <XMarkIcon className="w-4 h-4 ml-2" />
+                </button>
+              );
+            }
+            return null;
+          })}
         </div>
       )}
 
@@ -422,9 +454,23 @@ export default function PublicProducts() {
           filteredProducts.map((product) => (
             <div key={product.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
               <div className="relative aspect-square">
-                {product.categories && product.categories.length > 0 && 
-                  renderCategoryBadge(product.categories[0])
-                }
+                {product.categories && product.categories[0] && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const isActive = filters.category === product.category_id;
+                      handleFilterChange('category', isActive ? 'all' : product.category_id);
+                    }}
+                    className={`absolute top-2 left-2 px-3 py-1 rounded-full text-sm font-medium z-30 transition-all transform hover:scale-105 ${
+                      filters.category === product.category_id
+                        ? 'bg-primary text-white hover:bg-hover-primary'
+                        : 'bg-white/90 text-primary hover:bg-white'
+                    }`}
+                  >
+                    {product.categories[0].name}
+                  </button>
+                )}
                 <Link
                   href={`/product/${product.id}`}
                   className="block relative h-full w-full group"
@@ -461,6 +507,22 @@ export default function PublicProducts() {
               </div>
               <div className="p-4 dark:bg-gray-800">
                 <Link href={`/product/${product.id}`} className="block group">
+                  {product.categories?.[0]?.id && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFilterChange('category', filters.category === product.categories![0].id ? 'all' : product.categories![0].id);
+                      }}
+                      className={`mb-2 px-2 py-1 text-xs rounded-full transition-colors ${
+                        filters.category === product.categories![0].id
+                          ? 'bg-primary text-white hover:bg-hover-primary'
+                          : 'bg-gray-100 text-primary hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100'
+                      }`}
+                    >
+                      {product.categories![0].name}
+                    </button>
+                  )}
                   <h3 className="text-lg font-semibold text-primary dark:text-gray-100 group-hover:text-primary transition-colors">
                     {product.name}
                   </h3>
@@ -508,18 +570,9 @@ export default function PublicProducts() {
         isOpen={selectedProduct !== null}
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct ? {
-          id: selectedProduct.id,
-          name: selectedProduct.name,
-          cost: selectedProduct.cost,
-          created_at: selectedProduct.created_at || new Date().toISOString(),
-          updated_at: selectedProduct.updated_at || new Date().toISOString(),
-          color: selectedProduct.color || '',
-          size: selectedProduct.size || '',
-          gender: (selectedProduct.gender as "male" | "female" | "unisex" | null) || null,
-          description: selectedProduct.description || '',
-          image_url: selectedProduct.image_url || '',
-          user_id: selectedProduct.user_id || '',
-          slug: selectedProduct.slug || ''
+          ...selectedProduct,
+          sale_cost: selectedProduct.sale_cost || null,
+          quantity: selectedProduct.quantity || 0
         } : null}
       />
     </div>

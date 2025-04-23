@@ -18,8 +18,7 @@ interface Category {
 
 interface ProductWithImages extends Product {
   product_images: ProductImage[];
-  category_id?: string;
-  quantity: number;
+  category_id: string;
   status: 'in_stock' | 'sold_out' | 'hidden';
 }
 
@@ -29,6 +28,7 @@ interface ProductsProps {
 
 type SortField = 'name' | 'cost' | 'created_at' | 'size';
 type SortOrder = 'asc' | 'desc';
+type Gender = 'male' | 'female' | 'unisex' | '';
 
 export default function Products({ userId }: ProductsProps) {
   const [products, setProducts] = useState<ProductWithImages[]>([]);
@@ -50,8 +50,9 @@ export default function Products({ userId }: ProductsProps) {
   const [description, setDescription] = useState('');
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'unisex' | ''>('');
+  const [gender, setGender] = useState<Gender>('');
   const [cost, setCost] = useState('');
+  const [saleCost, setSaleCost] = useState('');
   const [images, setImages] = useState<ImageFile[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -126,29 +127,24 @@ export default function Products({ userId }: ProductsProps) {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newImages = Array.from(e.target.files).map((file, index) => ({
-        file,
-        preview: URL.createObjectURL(file),
-        isPrimary: index === 0 && images.length === 0 // First image is primary by default only if no other images
-      }));
-      setImages([...images, ...newImages]);
-    }
+    const files = Array.from(e.target.files || []);
+    const newImages: ImageFile[] = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      isPrimary: images.length === 0 // First image is primary by default
+    }));
+    setImages([...images, ...newImages]);
   };
 
   const removeImage = (index: number) => {
-    const newImages = [...images];
-    URL.revokeObjectURL(newImages[index].preview); // Clean up preview URL
-    newImages.splice(index, 1);
-    setImages(newImages);
+    setImages(images.filter((_, i) => i !== index));
   };
 
   const setPrimaryImage = (index: number) => {
-    const newImages = images.map((img, i) => ({
+    setImages(images.map((img, i) => ({
       ...img,
       isPrimary: i === index
-    }));
-    setImages(newImages);
+    })));
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
@@ -212,19 +208,34 @@ export default function Products({ userId }: ProductsProps) {
     setColor('');
     setGender('');
     setCost('');
+    setSaleCost('');
     setImages([]);
   };
 
   // Set form fields for editing
   const setEditForm = (product: ProductWithImages) => {
+    setEditingProduct(product);
     setName(product.name);
     setDescription(product.description || '');
-    setSize(product.size ?? '');
-    setColor(product.color ?? '');
-    setGender((product.gender ?? '') as 'male' | 'female' | 'unisex' | '');
+    setSize(product.size || '');
+    setColor(product.color || '');
+    setGender((product.gender as Gender) || '');
     setCost(product.cost.toString());
-    setSelectedCategory(product.category_id === null ? '' : (product.category_id || ''));
-    setImages([]);
+    setSaleCost(product.sale_cost?.toString() || '');
+    setSelectedCategory(product.category_id || '');
+    setShowEditModal(true);
+    
+    // Convert existing product images to ImageFile format
+    if (product.product_images && product.product_images.length > 0) {
+      const convertedImages: ImageFile[] = product.product_images.map(img => ({
+        file: null as unknown as File, // We don't have the original file for existing images
+        preview: img.image_url,
+        isPrimary: img.is_primary
+      }));
+      setImages(convertedImages);
+    } else {
+      setImages([]);
+    }
   };
 
   // Handle edit button click
@@ -346,10 +357,18 @@ export default function Products({ userId }: ProductsProps) {
         }
       }
 
-      // Find primary image URL
+      // Find primary image URL from new images or keep existing one
       const primaryImageUrl = images.find(img => img.isPrimary)?.preview;
-      const currentImageUrl = editingProduct.image_url === null ? undefined : editingProduct.image_url;
-      const finalImageUrl = primaryImageUrl || currentImageUrl;
+      const imageUrl = primaryImageUrl || editingProduct.image_url;
+
+      // Validate sale cost
+      const parsedCost = parseFloat(cost);
+      const parsedSaleCost = saleCost ? parseFloat(saleCost) : null;
+      
+      if (parsedSaleCost && parsedSaleCost >= parsedCost) {
+        toast.error('Sale cost must be less than original cost');
+        return;
+      }
 
       // Determine status based on quantity
       let newStatus = editingProduct.status;
@@ -370,9 +389,10 @@ export default function Products({ userId }: ProductsProps) {
         size: size || undefined,
         color: color || undefined,
         gender: gender || undefined,
-        cost: parseFloat(cost),
-        category_id: selectedCategory || undefined,
-        image_url: finalImageUrl,
+        cost: parsedCost,
+        sale_cost: parsedSaleCost,
+        category_id: selectedCategory || null,
+        image_url: imageUrl,
         quantity: editingProduct.quantity,
         status: newStatus
       };
@@ -421,22 +441,24 @@ export default function Products({ userId }: ProductsProps) {
       }
 
       const slug = generateSlug(name);
+      const productData = {
+        name,
+        description,
+        size: size || null,
+        color: color || null,
+        gender: gender || null,
+        cost: parseFloat(cost),
+        sale_cost: saleCost ? parseFloat(saleCost) : null,
+        user_id: userId,
+        slug,
+        quantity: 1,
+        status: editingProduct?.status || 'in_stock',
+        category_id: selectedCategory || null
+      };
 
       const { error } = await supabase
         .from('products')
-        .insert([{
-          user_id: userId,
-          name,
-          slug,
-          description,
-          size: size || null,
-          color: color || null,
-          gender: gender || null,
-          cost: parseFloat(cost),
-          image_url: imageUrl,
-          quantity: 1,
-          status: 'in_stock'
-        }]);
+        .insert([productData]);
 
       if (error) throw error;
 
@@ -563,9 +585,9 @@ export default function Products({ userId }: ProductsProps) {
                           mainImage={product.image_url || undefined}
                         />
                         <div className="absolute top-2 left-2 flex flex-col gap-2">
-                          {product.categories?.name && (
+                          {product.categories && product.categories.length > 0 && (
                             <span className="px-3 py-1 bg-primary text-white rounded-full text-sm">
-                              {product.categories.name}
+                              {product.categories[0].name}
                             </span>
                           )}
                           <span className={`px-3 py-1 rounded-full text-sm ${
@@ -802,7 +824,7 @@ export default function Products({ userId }: ProductsProps) {
                   <label className="block mb-2 text-secondary">Gender</label>
                   <select
                     value={gender}
-                    onChange={(e) => setGender(e.target.value as 'male' | 'female' | 'unisex' | '')}
+                    onChange={(e) => setGender(e.target.value as Gender)}
                     className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Select gender</option>
@@ -823,6 +845,37 @@ export default function Products({ userId }: ProductsProps) {
                     min="0"
                     className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2 text-secondary">Sale Cost</label>
+                  <input
+                    type="number"
+                    value={saleCost}
+                    onChange={(e) => setSaleCost(e.target.value)}
+                    step="0.01"
+                    min="0"
+                    max={cost || undefined}
+                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  {saleCost && parseFloat(saleCost) >= parseFloat(cost) && (
+                    <p className="text-danger text-sm mt-1">Sale cost must be less than the original cost</p>
+                  )}
+                </div>
+
+                <div className="mt-2">
+                  <p className="text-sm text-secondary">
+                    Final Price: {saleCost && parseFloat(saleCost) < parseFloat(cost) ? (
+                      <>
+                        <span className="line-through text-secondary-light">£{parseFloat(cost).toFixed(2)}</span>
+                        <span className="ml-2 text-primary">£{parseFloat(saleCost).toFixed(2)}</span>
+                      </>
+                    ) : (
+                      <span>£{parseFloat(cost || '0').toFixed(2)}</span>
+                    )}
+                  </p>
                 </div>
               </div>
 

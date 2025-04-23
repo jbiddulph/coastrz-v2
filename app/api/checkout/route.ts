@@ -152,6 +152,76 @@ export async function POST(req: Request) {
       throw new Error('Failed to create order items');
     }
 
+    // Update product quantities and status
+    for (const item of items) {
+      // Get current product data
+      const { data: productData, error: productError } = await supabaseAdmin
+        .from('products')
+        .select('quantity')
+        .eq('id', item.id)
+        .single();
+
+      if (productError) {
+        console.error('Error fetching product:', productError);
+        continue;
+      }
+
+      const newQuantity = (productData.quantity || 0) - item.quantity;
+      const newStatus = newQuantity <= 0 ? 'sold_out' : 'in_stock';
+
+      // Update product
+      const { error: updateError } = await supabaseAdmin
+        .from('products')
+        .update({ 
+          quantity: newQuantity,
+          status: newStatus
+        })
+        .eq('id', item.id);
+
+      if (updateError) {
+        console.error('Error updating product:', updateError);
+      }
+    }
+
+    // Handle order cancellation
+    const handleOrderCancellation = async (orderId: string) => {
+      // Get order items
+      const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+        .from('order_items')
+        .select('product_id')
+        .eq('order_id', orderId);
+
+      if (orderItemsError) {
+        console.error('Error fetching order items:', orderItemsError);
+        return;
+      }
+
+      // Restore each product's status and quantity
+      for (const item of orderItems) {
+        const { error: updateError } = await supabaseAdmin
+          .from('products')
+          .update({ 
+            quantity: 1,
+            status: 'in_stock'
+          })
+          .eq('id', item.product_id);
+
+        if (updateError) {
+          console.error('Error restoring product:', updateError);
+        }
+      }
+
+      // Update order status to cancelled
+      const { error: orderUpdateError } = await supabaseAdmin
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', orderId);
+
+      if (orderUpdateError) {
+        console.error('Error updating order status:', orderUpdateError);
+      }
+    };
+
     try {
       // Create Stripe checkout session
       const session = await stripe.checkout.sessions.create({

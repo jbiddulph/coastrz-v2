@@ -12,9 +12,9 @@ export default function Navbar() {
 
   const menuItems = [
     { name: 'All Products', href: '/' },
-    { name: 'New Arrivals', href: '/?sort=new' },
-    { name: 'Featured', href: '/?sort=featured' },
-    { name: 'Sale', href: '/?sort=sale' },
+    // { name: 'New Arrivals', href: '/?sort=new' },
+    // { name: 'Featured', href: '/?sort=featured' },
+    // { name: 'Sale', href: '/?sort=sale' },
   ];
 
   return (
@@ -24,8 +24,8 @@ export default function Navbar() {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="flex items-center text-2xl font-bold text-primary">
-                <span className="text-2xl">🛍️</span>{' '}
-                <span className="font-cooper-std">Shop</span>
+                <span className="text-2xl"><img src="/images/cef_logo.png" alt="Cissie Ednas Fancies" /></span>{' '}
+                {/* <span className="font-cooper-std">Shop</span> */}
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">

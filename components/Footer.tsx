@@ -9,9 +9,9 @@ export default function Footer() {
       title: 'Shop',
       links: [
         { name: 'All Products', href: '/products' },
-        { name: 'New Arrivals', href: '/products?sort=new' },
-        { name: 'Featured', href: '/products?sort=featured' },
-        { name: 'Sale', href: '/products?sort=sale' },
+        // { name: 'New Arrivals', href: '/products?sort=new' },
+        // { name: 'Featured', href: '/products?sort=featured' },
+        // { name: 'Sale', href: '/products?sort=sale' },
       ],
     },
     {
@@ -19,8 +19,8 @@ export default function Footer() {
       links: [
         { name: 'About Us', href: '/about' },
         { name: 'Contact', href: '/contact' },
-        { name: 'Careers', href: '/careers' },
-        { name: 'Press', href: '/press' },
+        // { name: 'Careers', href: '/careers' },
+        // { name: 'Press', href: '/press' },
       ],
     },
     {
@@ -87,7 +87,7 @@ export default function Footer() {
         {/* Bottom section */}
         <div className="mt-12 pt-8 border-t border-gray-200">
           <p className="text-center text-secondary-light text-sm">
-            © {currentYear} Shop. All rights reserved.
+            © {currentYear} Cissie Ednas Fancies. All rights reserved.
           </p>
         </div>
       </div>

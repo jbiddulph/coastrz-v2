@@ -6,10 +6,12 @@ export interface Product {
   color: string | null
   gender: string | null
   cost: number
+  sale_cost: number | null
   image_url: string | null
   created_at: string
   updated_at: string
   user_id: string | null
+  category_id: string | null
   product_images?: ProductImage[]
   categories?: {
     id: string

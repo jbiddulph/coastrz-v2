@@ -111,6 +111,34 @@ export async function PATCH(
 
     if (updateError) throw updateError;
 
+    // If the order is being cancelled, restore product quantities
+    if (status === 'cancelled') {
+      // Get order items
+      const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+        .from('order_items')
+        .select('product_id')
+        .eq('order_id', params.id);
+
+      if (orderItemsError) {
+        console.error('Error fetching order items:', orderItemsError);
+      } else {
+        // Restore each product's status and quantity
+        for (const item of orderItems) {
+          const { error: updateError } = await supabaseAdmin
+            .from('products')
+            .update({ 
+              quantity: 1,
+              status: 'in_stock'
+            })
+            .eq('id', item.product_id);
+
+          if (updateError) {
+            console.error('Error restoring product:', updateError);
+          }
+        }
+      }
+    }
+
     // Then fetch the complete updated order data
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from('orders')

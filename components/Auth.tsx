@@ -80,7 +80,7 @@ export default function Auth() {
           {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
         </button>
 
-        <div className="text-center">
+        {/* <div className="text-center">
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
@@ -88,7 +88,7 @@ export default function Auth() {
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
-        </div>
+        </div> */}
       </form>
     </div>
   );

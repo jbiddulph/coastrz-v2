@@ -11,7 +11,7 @@ import { headers } from 'next/headers';
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'MCP Store',
+  title: 'Cissie Ednas Fancies Shop',
   description: 'Your one-stop shop for all your needs',
 }
 
@@ -26,7 +26,7 @@ export default function RootLayout({
   const isAdminRoute = pathname.startsWith('/admin');
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
