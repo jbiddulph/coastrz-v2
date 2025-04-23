@@ -40,24 +40,19 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand section */}
           <div className="space-y-4">
-            <Link href="/" className="text-xl font-bold text-primary flex items-center">
-              <span className="text-2xl mr-2">🛍️</span> Shop
-            </Link>
+          <Link href="/" className="flex items-center text-2xl font-bold text-primary">
+                <span className="text-2xl"><img src="/images/cef_footer_logo.png" alt="Cissie Ednas Fancies" /></span>{' '}
+                {/* <span className="font-cooper-std">Shop</span> */}
+              </Link>
             <p className="text-secondary-light text-sm">
-              Your one-stop shop for quality products at great prices.
+              Cissie Edna's Fancies
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-secondary hover:text-primary">
+              <a href="https://www.facebook.com/share/1Bew3GjhDw/?mibextid=wwXIfr" target='_blank' className="text-secondary hover:text-primary">
                 <FaFacebook className="h-5 w-5" />
               </a>
-              <a href="#" className="text-secondary hover:text-primary">
-                <FaTwitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-secondary hover:text-primary">
+              <a href="https://www.instagram.com/cissie_edna?igsh=MW90bno2OHdlNGZxbw==" target='_blank' className="text-secondary hover:text-primary">
                 <FaInstagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-secondary hover:text-primary">
-                <FaLinkedin className="h-5 w-5" />
               </a>
             </div>
           </div>
