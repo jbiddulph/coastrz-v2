@@ -5,6 +5,8 @@ import { createClient } from '@/utils/supabase/client';
 import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 interface Order {
   id: string;
@@ -37,7 +39,9 @@ interface Order {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
     fetchOrders();
@@ -45,10 +49,18 @@ export default function OrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      setLoading(true);
+      setError(null);
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       
+      if (authError) {
+        throw new Error('Authentication error');
+      }
+
       if (!user) {
-        throw new Error('Not authenticated');
+        router.push('/login');
+        return;
       }
 
       const { data: ordersData, error: ordersError } = await supabase
@@ -67,11 +79,15 @@ export default function OrdersPage() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (ordersError) throw ordersError;
+      if (ordersError) {
+        throw ordersError;
+      }
 
       setOrders(ordersData || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setError('Failed to load orders. Please try again.');
+      toast.error('Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -107,6 +123,25 @@ export default function OrdersPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-bg-main">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <p className="text-red-500">{error}</p>
+            <button
+              onClick={fetchOrders}
+              className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+            >
+              Try Again
+            </button>
           </div>
         </div>
       </div>

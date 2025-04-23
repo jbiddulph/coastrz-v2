@@ -6,20 +6,26 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 
-  // Add pathname to headers for use in layout
-  const requestHeaders = new Headers(req.headers)
-  requestHeaders.set('x-pathname', req.nextUrl.pathname)
+  // Refresh session if expired
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession()
 
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
+  // Add the request pathname to a header to use it in the layout
+  res.headers.set('x-pathname', req.nextUrl.pathname)
 
-  // Refresh session if needed
-  await supabase.auth.getSession()
+  // Check if accessing a protected route (orders)
+  if (req.nextUrl.pathname.startsWith('/orders')) {
+    if (!session) {
+      // Redirect to login page with return URL
+      const redirectUrl = new URL('/login', req.url)
+      redirectUrl.searchParams.set('returnUrl', req.nextUrl.pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
+  }
 
-  return response
+  return res
 }
 
 export const config = {
