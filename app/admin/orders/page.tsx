@@ -45,7 +45,15 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/orders');
+      const response = await fetch('/api/admin/orders', {
+        // Add cache: 'no-store' to prevent caching
+        cache: 'no-store',
+        // Add timestamp to prevent caching
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch orders');
       }
@@ -69,6 +77,13 @@ export default function OrdersPage() {
     return () => {
       window.removeEventListener('focus', fetchOrders);
     };
+  }, []); // Remove pathname dependency
+
+  // Add a separate effect for pathname changes
+  useEffect(() => {
+    if (pathname) {
+      fetchOrders();
+    }
   }, [pathname]);
 
   const getStatusColor = (status: string) => {
