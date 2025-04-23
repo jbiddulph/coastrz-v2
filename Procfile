@@ -1,1 +1,1 @@
-web: npm start -p $PORT 
+web: cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/ && node .next/standalone/server.js 
