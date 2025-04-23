@@ -52,50 +52,51 @@ export default function OrdersPage() {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
-        },
-        next: {
-          revalidate: 0
         }
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch orders');
       }
-      
+
       const data = await response.json();
-      console.log('Fetched orders:', data); // Add logging to debug
-      setOrders(data || []);
+      console.log('Fetched orders:', data); // Debug log
+      
+      if (Array.isArray(data)) {
+        setOrders(data);
+      } else {
+        console.error('Invalid orders data received:', data);
+        setOrders([]);
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setOrders([]); // Reset orders on error
     } finally {
       setLoading(false);
     }
   };
 
+  // Refresh orders when component mounts and when pathname changes
   useEffect(() => {
-    // Fetch orders when the component mounts
+    console.log('Orders component mounted or pathname changed'); // Debug log
     fetchOrders();
-
-    // Add event listener for focus
-    window.addEventListener('focus', fetchOrders);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('focus', fetchOrders);
-    };
-  }, []); // Remove pathname dependency
-
-  // Add a separate effect for pathname changes
-  useEffect(() => {
-    if (pathname) {
-      fetchOrders();
-    }
   }, [pathname]);
 
-  // Force an immediate fetch when the refresh button is clicked
-  const handleRefresh = () => {
-    console.log('Refreshing orders...'); // Add logging to debug
-    fetchOrders();
+  // Set up interval to refresh orders periodically
+  useEffect(() => {
+    console.log('Setting up refresh interval'); // Debug log
+    const intervalId = setInterval(fetchOrders, 5000); // Refresh every 5 seconds
+
+    return () => {
+      console.log('Cleaning up refresh interval'); // Debug log
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    console.log('Manual refresh triggered'); // Debug log
+    await fetchOrders();
   };
 
   const getStatusColor = (status: string) => {
@@ -124,7 +125,7 @@ export default function OrdersPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="bg-primary rounded-t-lg p-4 flex justify-between items-center">
-        <h2 className="text-neutral text-2xl font-bold">Orders</h2>
+        <h2 className="text-neutral text-2xl font-bold">Orders ({orders.length})</h2>
         <button
           onClick={handleRefresh}
           className="px-4 py-2 bg-neutral text-primary rounded hover:bg-neutral-light transition-colors"

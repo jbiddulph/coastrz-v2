@@ -75,12 +75,27 @@ export async function GET(
 
     console.log('Order Data:', orderData); // Add this for debugging
 
-    return NextResponse.json(orderData);
+    return new NextResponse(JSON.stringify(orderData), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   } catch (error: any) {
     console.error('Error fetching order:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error fetching order' },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({ error: error.message || 'Error fetching order' }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
     );
   }
 }
@@ -94,9 +109,17 @@ export async function PATCH(
     const { status } = body;
 
     if (!status) {
-      return NextResponse.json(
-        { error: 'Status is required' },
-        { status: 400 }
+      return new NextResponse(
+        JSON.stringify({ error: 'Status is required' }),
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
 
@@ -119,37 +142,40 @@ export async function PATCH(
 
     if (orderItemsError) {
       console.error('Error fetching order items:', orderItemsError);
-    } else {
-      // Handle product updates based on order status
-      if (status === 'cancelled') {
-        // Restore each product's status and quantity for cancelled orders
-        for (const item of orderItems) {
-          const { error: updateError } = await supabaseAdmin
-            .from('products')
-            .update({ 
-              quantity: 1,
-              status: 'in_stock'
-            })
-            .eq('id', item.product_id);
+      throw orderItemsError;
+    }
 
-          if (updateError) {
-            console.error('Error restoring product:', updateError);
-          }
+    // Handle product updates based on order status
+    if (status === 'cancelled') {
+      // Restore each product's status and quantity for cancelled orders
+      for (const item of orderItems) {
+        const { error: updateError } = await supabaseAdmin
+          .from('products')
+          .update({ 
+            quantity: 1,
+            status: 'in_stock'
+          })
+          .eq('id', item.product_id);
+
+        if (updateError) {
+          console.error('Error restoring product:', updateError);
+          throw updateError;
         }
-      } else if (status === 'completed') {
-        // Mark products as sold out for completed orders
-        for (const item of orderItems) {
-          const { error: updateError } = await supabaseAdmin
-            .from('products')
-            .update({ 
-              status: 'sold_out',
-              quantity: 0
-            })
-            .eq('id', item.product_id);
+      }
+    } else if (status === 'completed') {
+      // Mark products as sold out for completed orders
+      for (const item of orderItems) {
+        const { error: updateError } = await supabaseAdmin
+          .from('products')
+          .update({ 
+            status: 'sold_out',
+            quantity: 0
+          })
+          .eq('id', item.product_id);
 
-          if (updateError) {
-            console.error('Error updating product status:', updateError);
-          }
+        if (updateError) {
+          console.error('Error updating product status:', updateError);
+          throw updateError;
         }
       }
     }
@@ -193,12 +219,27 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json(orderData);
+    return new NextResponse(JSON.stringify(orderData), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   } catch (error: any) {
     console.error('Error updating order:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error updating order' },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({ error: error.message || 'Error updating order' }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
     );
   }
 } 

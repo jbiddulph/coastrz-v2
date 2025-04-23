@@ -58,15 +58,37 @@ export async function GET() {
         user_email: usersData?.find(user => user.id === order.user_id)?.email
       }));
 
-      return NextResponse.json(ordersWithEmails);
+      return new NextResponse(JSON.stringify(ordersWithEmails), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
     }
 
-    return NextResponse.json(ordersData);
+    return new NextResponse(JSON.stringify(ordersData), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   } catch (error: any) {
     console.error('Error fetching orders:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error fetching orders' },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({ error: error.message || 'Error fetching orders' }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
     );
   }
 } 
