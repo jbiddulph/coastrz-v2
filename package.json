@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "cd .next/standalone && node server.js",
-    "lint": "next lint",
-    "heroku-postbuild": "npm run build"
+    "heroku-postbuild": "npm run build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "start": "node .next/standalone/server.js",
+    "lint": "next lint"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.2",
