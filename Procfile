@@ -1,1 +1,1 @@
-web: cp -r .next/standalone/* . && cp -r .next/static .next/ && cp -r public . && node server.js 
+web: npm start 
