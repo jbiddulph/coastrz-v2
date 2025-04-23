@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
-import { Badge } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/badge';
 
 interface Order {
   id: string;

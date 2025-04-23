@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
-import { DeliveryAddressForm, DeliveryAddressFormData } from '@/components/DeliveryAddressForm';
+import { DeliveryAddressForm, type DeliveryAddressFormData } from '@/app/components/DeliveryAddressForm';
 import { redirect } from 'next/navigation';
 import { Database } from '@/types/supabase';
 
