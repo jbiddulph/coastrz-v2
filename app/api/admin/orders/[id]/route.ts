@@ -111,18 +111,18 @@ export async function PATCH(
 
     if (updateError) throw updateError;
 
-    // If the order is being cancelled, restore product quantities
-    if (status === 'cancelled') {
-      // Get order items
-      const { data: orderItems, error: orderItemsError } = await supabaseAdmin
-        .from('order_items')
-        .select('product_id')
-        .eq('order_id', params.id);
+    // Get order items
+    const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+      .from('order_items')
+      .select('product_id, quantity')
+      .eq('order_id', params.id);
 
-      if (orderItemsError) {
-        console.error('Error fetching order items:', orderItemsError);
-      } else {
-        // Restore each product's status and quantity
+    if (orderItemsError) {
+      console.error('Error fetching order items:', orderItemsError);
+    } else {
+      // Handle product updates based on order status
+      if (status === 'cancelled') {
+        // Restore each product's status and quantity for cancelled orders
         for (const item of orderItems) {
           const { error: updateError } = await supabaseAdmin
             .from('products')
@@ -134,6 +134,21 @@ export async function PATCH(
 
           if (updateError) {
             console.error('Error restoring product:', updateError);
+          }
+        }
+      } else if (status === 'completed') {
+        // Mark products as sold out for completed orders
+        for (const item of orderItems) {
+          const { error: updateError } = await supabaseAdmin
+            .from('products')
+            .update({ 
+              status: 'sold_out',
+              quantity: 0
+            })
+            .eq('id', item.product_id);
+
+          if (updateError) {
+            console.error('Error updating product status:', updateError);
           }
         }
       }
