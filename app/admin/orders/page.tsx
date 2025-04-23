@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface Order {
   id: string;
@@ -38,9 +39,12 @@ interface Order {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const fetchOrders = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/admin/orders');
       if (!response.ok) {
         throw new Error('Failed to fetch orders');
@@ -55,8 +59,17 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
+    // Fetch orders when the component mounts
     fetchOrders();
-  }, []);
+
+    // Add event listener for focus
+    window.addEventListener('focus', fetchOrders);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('focus', fetchOrders);
+    };
+  }, [pathname]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -83,8 +96,14 @@ export default function OrdersPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="bg-primary rounded-t-lg p-4">
+      <div className="bg-primary rounded-t-lg p-4 flex justify-between items-center">
         <h2 className="text-neutral text-2xl font-bold">Orders</h2>
+        <button
+          onClick={fetchOrders}
+          className="px-4 py-2 bg-neutral text-primary rounded hover:bg-neutral-light transition-colors"
+        >
+          Refresh
+        </button>
       </div>
 
       <div className="bg-neutral rounded-b-lg shadow-lg overflow-hidden">

@@ -108,8 +108,11 @@ export default function OrderDetailsPage() {
       const updatedOrder = await response.json();
       console.log('Updated order:', updatedOrder);
       
-      await fetchOrder();
+      setOrder(updatedOrder);
       toast.success('Order status updated successfully');
+      
+      // Navigate back to the orders page to ensure it's refreshed
+      router.push('/admin/orders');
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to update order status');
