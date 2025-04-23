@@ -78,9 +78,9 @@ export default function ProductPage({ params }: ProductPageProps) {
             images={product.product_images || []}
             mainImage={product.image_url || undefined}
           />
-          {product.categories?.name && (
+          {product.categories && product.categories[0]?.name && (
             <span className="absolute top-4 left-4 px-3 py-1 bg-primary text-white rounded-full text-sm">
-              {product.categories.name}
+              {product.categories[0].name}
             </span>
           )}
         </div>
