@@ -41,11 +41,11 @@ export default function Footer() {
           {/* Brand section */}
           <div className="space-y-4">
           <Link href="/" className="flex items-center text-2xl font-bold text-primary">
-                <span className="text-2xl"><img src="/images/cef_footer_logo.png" alt="Cissie Ednas Fancies" /></span>{' '}
+                <span className="text-2xl"><img src="/images/coastrz_footer_logo.png" alt="CoastrZ" /></span>{' '}
                 {/* <span className="font-cooper-std">Shop</span> */}
               </Link>
             <p className="text-secondary-light text-sm">
-              Cissie Edna's Fancies
+              CoastrZ
             </p>
             <div className="flex space-x-4">
               <a href="https://www.facebook.com/share/1Bew3GjhDw/?mibextid=wwXIfr" target='_blank' className="text-secondary hover:text-primary">
@@ -82,7 +82,7 @@ export default function Footer() {
         {/* Bottom section */}
         <div className="mt-12 pt-8 border-t border-gray-200">
           <p className="text-center text-secondary-light text-sm">
-            © {currentYear} Cissie Ednas Fancies. All rights reserved.
+            © {currentYear} CoastrZ. All rights reserved.
           </p>
         </div>
       </div>

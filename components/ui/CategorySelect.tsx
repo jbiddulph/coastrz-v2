@@ -22,12 +22,17 @@ export default function CategorySelect({ value, onChange, required = false, clas
   useEffect(() => {
     async function fetchCategories() {
       try {
+        console.log('Fetching categories...');
         const { data, error } = await supabase
           .from('categories')
           .select('*')
           .order('name');
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
+        console.log('Categories fetched:', data);
         setCategories(data || []);
       } catch (error) {
         console.error('Error fetching categories:', error);
