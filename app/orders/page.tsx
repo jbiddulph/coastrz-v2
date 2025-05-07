@@ -22,7 +22,9 @@ interface Order {
     product: {
       name: string;
       image_url?: string;
+      is_custom?: boolean;
     };
+    design_image_url?: string;
   }[];
   delivery_address?: {
     full_name: string;
@@ -192,7 +194,13 @@ export default function OrdersPage() {
                   <div className="space-y-2">
                     {order.order_items?.map((item) => (
                       <div key={item.id} className="flex items-center gap-4">
-                        {item.product.image_url && (
+                        {item.product.is_custom && item.design_image_url ? (
+                          <img
+                            src={item.design_image_url}
+                            alt="Custom design"
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : item.product.image_url && (
                           <img
                             src={item.product.image_url}
                             alt={item.product.name}
@@ -204,6 +212,25 @@ export default function OrdersPage() {
                           <p className="text-sm text-secondary-light">
                             Quantity: {item.quantity} × £{item.unit_price.toFixed(2)}
                           </p>
+                          {item.product.is_custom && item.design_image_url && (
+                            <div className="mt-2">
+                              <p className="text-sm text-secondary-light mb-1">Custom Design:</p>
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={item.design_image_url}
+                                  alt="Custom design"
+                                  className="w-16 h-16 object-cover rounded border border-secondary-border"
+                                />
+                                <a
+                                  href={item.design_image_url}
+                                  download
+                                  className="text-sm text-primary hover:text-hover-primary"
+                                >
+                                  Download Design
+                                </a>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

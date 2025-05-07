@@ -44,9 +44,11 @@ interface Order {
     product_id: string;
     quantity: number;
     unit_price: number;
+    design_image_url?: string;
     product: {
       name: string;
       image_url?: string;
+      is_custom?: boolean;
     };
   }[];
 }
@@ -274,7 +276,13 @@ export default function OrderDetailsPage() {
                     <tr key={item.id}>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          {item.product.image_url && (
+                          {item.product.is_custom && item.design_image_url ? (
+                            <img
+                              src={item.design_image_url}
+                              alt="Custom design"
+                              className="w-12 h-12 object-cover rounded mr-4"
+                            />
+                          ) : item.product.image_url && (
                             <img
                               src={item.product.image_url}
                               alt={item.product.name}
@@ -282,6 +290,15 @@ export default function OrderDetailsPage() {
                             />
                           )}
                           <span>{item.product.name}</span>
+                          {item.product.is_custom && item.design_image_url && (
+                            <a
+                              href={item.design_image_url}
+                              download
+                              className="ml-2 text-sm text-primary hover:text-hover-primary"
+                            >
+                              Download Design
+                            </a>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">{item.quantity}</td>

@@ -61,6 +61,7 @@ export type Database = {
           product_id: string | null
           quantity: number
           unit_price: number
+          design_image_url: string | null
         }
         Insert: {
           created_at?: string
@@ -69,6 +70,7 @@ export type Database = {
           product_id?: string | null
           quantity: number
           unit_price: number
+          design_image_url?: string | null
         }
         Update: {
           created_at?: string
@@ -77,6 +79,7 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           unit_price?: number
+          design_image_url?: string | null
         }
       }
       orders: {
@@ -117,7 +120,6 @@ export type Database = {
           cost: number
           created_at: string
           description: string | null
-          gender: "male" | "female" | "unisex" | null
           id: string
           image_url: string | null
           name: string
@@ -130,7 +132,6 @@ export type Database = {
           cost: number
           created_at?: string
           description?: string | null
-          gender?: "male" | "female" | "unisex" | null
           id?: string
           image_url?: string | null
           name: string
@@ -143,7 +144,6 @@ export type Database = {
           cost?: number
           created_at?: string
           description?: string | null
-          gender?: "male" | "female" | "unisex" | null
           id?: string
           image_url?: string | null
           name?: string
@@ -154,7 +154,7 @@ export type Database = {
       }
     }
     Enums: {
-      gender_type: "male" | "female" | "unisex"
+      // gender_type: "male" | "female" | "unisex"
     }
   }
 } 

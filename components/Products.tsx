@@ -28,7 +28,6 @@ interface ProductsProps {
 
 type SortField = 'name' | 'cost' | 'created_at' | 'size';
 type SortOrder = 'asc' | 'desc';
-type Gender = 'male' | 'female' | 'unisex' | '';
 
 export default function Products({ userId }: ProductsProps) {
   const [products, setProducts] = useState<ProductWithImages[]>([]);
@@ -50,7 +49,6 @@ export default function Products({ userId }: ProductsProps) {
   const [description, setDescription] = useState('');
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
-  const [gender, setGender] = useState<Gender>('');
   const [cost, setCost] = useState('');
   const [saleCost, setSaleCost] = useState('');
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -206,7 +204,6 @@ export default function Products({ userId }: ProductsProps) {
     setDescription('');
     setSize('');
     setColor('');
-    setGender('');
     setCost('');
     setSaleCost('');
     setImages([]);
@@ -219,9 +216,6 @@ export default function Products({ userId }: ProductsProps) {
     setDescription(product.description || '');
     setSize(product.size || '');
     setColor(product.color || '');
-    setGender((product.gender as Gender) || '');
-    setCost(product.cost.toString());
-    setSaleCost(product.sale_cost?.toString() || '');
     setSelectedCategory(product.category_id || '');
     setShowEditModal(true);
     
@@ -388,7 +382,6 @@ export default function Products({ userId }: ProductsProps) {
         description,
         size: size || undefined,
         color: color || undefined,
-        gender: gender || undefined,
         cost: parsedCost,
         sale_cost: parsedSaleCost,
         category_id: selectedCategory || null,
@@ -446,7 +439,6 @@ export default function Products({ userId }: ProductsProps) {
         description,
         size: size || null,
         color: color || null,
-        gender: gender || null,
         cost: parseFloat(cost),
         sale_cost: saleCost ? parseFloat(saleCost) : null,
         user_id: userId,
@@ -662,9 +654,6 @@ export default function Products({ userId }: ProductsProps) {
                           <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                             Color
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
-                            Gender
-                          </th>
                           <th 
                             className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider cursor-pointer group"
                             onClick={() => handleSort('cost')}
@@ -715,9 +704,6 @@ export default function Products({ userId }: ProductsProps) {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-secondary-light">{product.color}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-secondary-light">{product.gender}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-primary">
@@ -820,20 +806,6 @@ export default function Products({ userId }: ProductsProps) {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block mb-2 text-secondary">Gender</label>
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value as Gender)}
-                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="unisex">Unisex</option>
-                  </select>
-                </div>
-
                 <div>
                   <label className="block mb-2 text-secondary">Cost *</label>
                   <input

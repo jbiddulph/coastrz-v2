@@ -83,7 +83,7 @@ export default function QuickView({ isOpen, onClose, product }: QuickViewProps) 
                   {/* Product Details */}
                   <div className="w-full sm:w-1/2">
                     <Link 
-                      href={`/product/${product.id}`}
+                      href={product.slug === 'custom-coaster' || product.is_custom ? '/design-my-coaster' : `/product/${product.id}`}
                       className="inline-block group"
                       onClick={onClose}
                     >
@@ -141,7 +141,7 @@ export default function QuickView({ isOpen, onClose, product }: QuickViewProps) 
                         {isDisabled ? 'Already in Cart' : 'Add to Cart'}
                       </button>
                       <Link
-                        href={`/product/${product.id}`}
+                        href={product.slug === 'custom-coaster' || product.is_custom ? '/design-my-coaster' : `/product/${product.id}`}
                         className="w-full text-center rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                         onClick={onClose}
                       >

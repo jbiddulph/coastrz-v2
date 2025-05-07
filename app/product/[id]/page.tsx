@@ -37,6 +37,12 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       return;
     }
 
+    // Redirect to design page if it's a custom coaster
+    if (data.slug === 'custom-coaster' || data.is_custom) {
+      router.push('/design-my-coaster');
+      return;
+    }
+
     setProduct(data);
     setLoading(false);
   };

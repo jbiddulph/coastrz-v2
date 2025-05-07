@@ -20,6 +20,7 @@ export interface Product {
   }[]
   slug: string
   quantity: number
+  is_custom?: boolean
 }
 
 export interface ProductImage {
@@ -32,8 +33,18 @@ export interface ProductImage {
   updated_at?: string
 }
 
-export interface CartItem extends Product {
-  quantity: number
+export interface CartItem {
+  id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  cost: number;
+  quantity: number;
+  size?: string;
+  color?: string;
+  gender?: "male" | "female" | "unisex";
+  is_custom?: boolean;
+  design_image_url?: string;
 }
 
 export interface ImageFile {

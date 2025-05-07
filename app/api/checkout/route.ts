@@ -13,6 +13,8 @@ interface CartItem {
   size?: string;
   color?: string;
   gender?: "male" | "female" | "unisex";
+  is_custom: boolean;
+  design_image_url?: string;
 }
 
 interface ShippingAddress {
@@ -144,6 +146,7 @@ export async function POST(req: Request) {
           product_id: item.id,
           quantity: item.quantity,
           unit_price: item.cost,
+          design_image_url: item.is_custom ? item.design_image_url : null
         }))
       );
 
@@ -154,6 +157,9 @@ export async function POST(req: Request) {
 
     // Update product quantities and status
     for (const item of items) {
+      // Skip stock updates for custom products
+      if (item.is_custom) continue;
+
       // Get current product data
       const { data: productData, error: productError } = await supabaseAdmin
         .from('products')

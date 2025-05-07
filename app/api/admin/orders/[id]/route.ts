@@ -36,8 +36,10 @@ export async function GET(
           *,
           product:products (
             name,
-            image_url
-          )
+            image_url,
+            is_custom
+          ),
+          design_image_url
         )
       `)
       .eq('id', params.id)
@@ -192,8 +194,10 @@ export async function PATCH(
           *,
           product:products (
             name,
-            image_url
-          )
+            image_url,
+            is_custom
+          ),
+          design_image_url
         )
       `)
       .eq('id', params.id)

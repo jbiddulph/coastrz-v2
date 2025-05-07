@@ -6,6 +6,7 @@ import { Product } from '@/types/types';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ImageCarousel from '@/components/ImageCarousel';
+import { useRouter } from 'next/navigation';
 
 interface ProductPageProps {
   params: {
@@ -18,6 +19,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [loading, setLoading] = useState(true);
   const { addItem } = useCart();
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -37,6 +39,13 @@ export default function ProductPage({ params }: ProductPageProps) {
           .single();
 
         if (error) throw error;
+
+        // Redirect to design page if it's a custom coaster
+        if (data.slug === 'custom-coaster' || data.is_custom) {
+          router.push('/design-my-coaster');
+          return;
+        }
+
         setProduct(data);
       } catch (error) {
         console.error('Error fetching product:', error);
