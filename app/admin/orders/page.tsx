@@ -5,6 +5,11 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { supabase } from '@/utils/supabase/client';
+import { useTheme } from '@/contexts/ThemeContext';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 interface Order {
   id: string;

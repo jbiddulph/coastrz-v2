@@ -7,6 +7,9 @@ import DesignTool from '@/components/DesignTool';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/utils/supabase/client';
 
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export default function DesignMyCoaster() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);

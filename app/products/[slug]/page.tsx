@@ -7,6 +7,11 @@ import ImageCarousel from '@/components/ImageCarousel';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase/client';
 import { Product } from '@/types/types';
+import PublicProducts from '@/components/PublicProducts';
+import { useTheme } from '@/contexts/ThemeContext';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 interface ProductPageProps {
   params: {

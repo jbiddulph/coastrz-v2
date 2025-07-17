@@ -1,3 +1,10 @@
+'use client';
+
+import { useTheme } from '@/contexts/ThemeContext';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export default function AboutPage() {
   return (
     <div className="container mx-auto px-4 py-12">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeftIcon, ShareIcon } from '@heroicons/react/24/solid';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
@@ -10,6 +10,9 @@ import Link from 'next/link';
 import { Product, ProductImage } from '@/types/types';
 import { supabase } from '@/utils/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const { theme } = useTheme();

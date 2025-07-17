@@ -7,6 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { supabase } from '@/utils/supabase/client';
+import { useTheme } from '@/contexts/ThemeContext';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 interface Order {
   id: string;

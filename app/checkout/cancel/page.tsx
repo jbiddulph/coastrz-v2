@@ -3,6 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { XCircleIcon } from '@heroicons/react/24/solid';
 
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export default function CheckoutCancel() {
   const router = useRouter();
 

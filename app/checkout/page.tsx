@@ -1,9 +1,17 @@
-import { Suspense } from 'react';
-import { cookies } from 'next/headers';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/utils/supabase/client';
+import { toast } from 'react-hot-toast';
+import { loadStripe } from '@stripe/stripe-js';
+import { cookies } from 'next/headers';
 import { DeliveryAddressForm, type DeliveryAddressFormData } from '@/app/components/DeliveryAddressForm';
 import { redirect } from 'next/navigation';
 import { Database } from '@/types/supabase';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 interface CartItem {
   id: string;
@@ -174,9 +182,7 @@ export default async function CheckoutPage() {
 
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Delivery Address</h2>
-          <Suspense fallback={<div>Loading...</div>}>
-            <DeliveryAddressForm onSubmit={handleDeliveryAddress} />
-          </Suspense>
+          <DeliveryAddressForm onSubmit={handleDeliveryAddress} />
         </div>
       </div>
     </div>

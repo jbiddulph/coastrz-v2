@@ -1,7 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { supabase } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
+import { useTheme } from '@/contexts/ThemeContext';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({

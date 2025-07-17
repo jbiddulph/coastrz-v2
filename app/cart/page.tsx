@@ -7,6 +7,9 @@ import Navbar from '@/components/Navbar';
 import { ShoppingBagIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export default function CartPage() {
   const router = useRouter();
 

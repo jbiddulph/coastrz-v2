@@ -1,9 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase/client';
+import { Product } from '@/types/types';
+import AddProductForm from '@/components/AddProductForm';
 import Products from '@/components/Products';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 // Define admin emails here (same as profile page)
 const ADMIN_EMAILS = [

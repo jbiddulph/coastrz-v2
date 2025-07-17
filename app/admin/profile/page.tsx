@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase/client';
+import { toast } from 'react-hot-toast';
+import { useTheme } from '@/contexts/ThemeContext';
 
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 
 export default function ProfilePage() {

@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { supabase } from '@/utils/supabase/client';
+import Categories from '@/components/Categories';
+import { useTheme } from '@/contexts/ThemeContext';
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 interface Category {
   id: string;
