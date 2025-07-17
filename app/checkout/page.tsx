@@ -5,9 +5,8 @@ import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 import { loadStripe } from '@stripe/stripe-js';
-import { cookies } from 'next/headers';
+import { useRouter } from 'next/navigation';
 import { DeliveryAddressForm, type DeliveryAddressFormData } from '@/app/components/DeliveryAddressForm';
-import { redirect } from 'next/navigation';
 import { Database } from '@/types/supabase';
 
 // Force dynamic rendering to prevent static generation errors
@@ -43,65 +42,32 @@ interface CartItemWithProduct {
   products: Product;
 }
 
-async function getCartItems(): Promise<CartItem[]> {
-  const cookieStore = cookies();
+export default function CheckoutPage() {
+  const { items: cartItems } = useCart();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
   
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Get cart items from the database if user is logged in
-    if (user) {
-      const { data: cartItems, error } = await supabase
-        .from('cart_items')
-        .select(`
-          quantity,
-          products (
-            id,
-            name,
-            description,
-            cost,
-            size,
-            color,
-            product_images (
-              image_url
-            )
-          )
-        `)
-        .eq('user_id', user.id)
-        .returns<CartItemWithProduct[]>();
-
-      if (error) throw error;
-
-      return cartItems.map(item => ({
-        id: item.products.id,
-        name: item.products.name,
-        description: item.products.description,
-        image_url: item.products.product_images?.[0]?.image_url,
-        cost: item.products.cost,
-        size: item.products.size || undefined,
-        color: item.products.color || undefined,
-        quantity: item.quantity
-      }));
+  useEffect(() => {
+    if (!cartItems || cartItems.length === 0) {
+      router.push('/cart');
     }
-    
-    // Get cart items from cookies if user is not logged in
-    const cartCookie = cookieStore.get('cart');
-    if (cartCookie) {
-      return JSON.parse(cartCookie.value);
-    }
-    
-    return [];
-  } catch (error) {
-    console.error('Error fetching cart items:', error);
-    return [];
-  }
-}
+  }, [cartItems, router]);
 
-export default async function CheckoutPage() {
-  const cartItems = await getCartItems();
-  
   if (!cartItems || cartItems.length === 0) {
-    redirect('/cart');
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
+          <p className="mb-4">Please add some items to your cart before checkout.</p>
+          <button 
+            onClick={() => router.push('/products')}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-hover-primary transition-colors"
+          >
+            Continue Shopping
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const totalAmount = cartItems.reduce(
@@ -110,7 +76,7 @@ export default async function CheckoutPage() {
   );
 
   async function handleDeliveryAddress(data: DeliveryAddressFormData) {
-    'use server';
+    setLoading(true);
 
     const shippingAddress = {
       full_name: data.full_name,
@@ -136,17 +102,19 @@ export default async function CheckoutPage() {
         }),
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
+        throw new Error(responseData.error || 'Failed to create checkout session');
       }
 
       // Redirect to Stripe Checkout
-      redirect(`https://checkout.stripe.com/c/pay/${data.sessionId}`);
+      window.location.href = `https://checkout.stripe.com/c/pay/${responseData.sessionId}`;
     } catch (error) {
       console.error('Error creating checkout session:', error);
-      throw error;
+      toast.error('Failed to create checkout session. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -183,6 +151,11 @@ export default async function CheckoutPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Delivery Address</h2>
           <DeliveryAddressForm onSubmit={handleDeliveryAddress} />
+          {loading && (
+            <div className="mt-4 text-center">
+              <p>Creating checkout session...</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
