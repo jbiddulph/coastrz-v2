@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Completely disable static generation
-  output: 'standalone',
   images: {
     remotePatterns: [
       {
@@ -11,17 +9,8 @@ const nextConfig = {
       },
     ],
   },
-  // Force all pages to be dynamic
-  experimental: {
-    // Disable static generation completely
-    staticGenerationAsyncStorage: false,
-  },
   // Disable static generation completely
   trailingSlash: false,
-  // Force dynamic rendering for all pages
-  generateStaticParams: async () => {
-    return [];
-  },
 }
 
 module.exports = nextConfig
