@@ -14,27 +14,42 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 // Debug: Log environment variables (redacted)
-console.log('Environment check:', {
-  hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-  hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  hasStripeKey: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-  hasBaseUrl: !!process.env.NEXT_PUBLIC_BASE_URL,
-  nodeEnv: process.env.NODE_ENV,
-  port: process.env.PORT
-})
+try {
+  console.log('Environment check:', {
+    hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    hasStripeKey: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    hasBaseUrl: !!process.env.NEXT_PUBLIC_BASE_URL,
+    nodeEnv: process.env.NODE_ENV,
+    port: process.env.PORT
+  })
+} catch (error) {
+  console.error('Error in environment check:', error)
+}
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
-        <Providers>
-          {children}
-        </Providers>
-      </body>
-    </html>
-  )
+  try {
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <body className={inter.className} suppressHydrationWarning>
+          <Providers>
+            {children}
+          </Providers>
+        </body>
+      </html>
+    )
+  } catch (error) {
+    console.error('Error in RootLayout:', error)
+    return (
+      <html lang="en">
+        <body>
+          <div>Error loading app: {error instanceof Error ? error.message : 'Unknown error'}</div>
+        </body>
+      </html>
+    )
+  }
 }
