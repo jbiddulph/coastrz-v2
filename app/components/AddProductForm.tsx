@@ -20,7 +20,6 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
   const [categoryId, setCategoryId] = useState('');
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'unisex' | ''>('');
   const [cost, setCost] = useState('');
   const [saleCost, setSaleCost] = useState('');
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -121,7 +120,6 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
           category_id: categoryId,
           size: size || null,
           color: color || null,
-          gender: gender || null,
           cost: parseFloat(cost),
           sale_cost: saleCost && parseFloat(saleCost) < parseFloat(cost) ? parseFloat(saleCost) : null,
           image_url: uploadedImages.find(img => img.isPrimary)?.url || uploadedImages[0].url,
@@ -175,19 +173,6 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-2 text-secondary">Gender</label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value as 'male' | 'female' | 'unisex' | '')}
-                className="w-full px-4 py-2 bg-bg-main border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-secondary"
-              >
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="unisex">Unisex</option>
-              </select>
-            </div>
 
             <div>
               <label className="block mb-2 text-secondary">Cost *</label>

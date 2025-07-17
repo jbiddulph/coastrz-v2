@@ -12,7 +12,6 @@ interface CartItem {
   quantity: number;
   size?: string;
   color?: string;
-  gender?: "male" | "female" | "unisex";
   is_custom: boolean;
   design_image_url?: string;
 }
@@ -241,14 +240,12 @@ export async function POST(req: Request) {
                 item.description,
                 item.size && `Size: ${item.size}`,
                 item.color && `Color: ${item.color}`,
-                item.gender && `Gender: ${item.gender}`,
               ].filter(Boolean).join(' | '),
               images: item.image_url ? [item.image_url] : [],
               metadata: {
                 product_id: item.id,
                 size: item.size,
                 color: item.color,
-                gender: item.gender,
               }
             },
             unit_amount: Math.round(item.cost * 100), // Convert to pence

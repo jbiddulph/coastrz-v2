@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { supabase } from '@/utils/supabase/client';
 
 interface Category {
   id: string;
@@ -18,7 +18,6 @@ export default function CategoriesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [name, setName] = useState('');
-  const supabase = createClient();
 
   useEffect(() => {
     fetchCategories();

@@ -56,7 +56,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
           <Input
             id="full_name"
             {...register('full_name')}
-            className="mt-1"
+            className="mt-1 p-2"
             error={errors.full_name?.message}
           />
         </div>
@@ -67,7 +67,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
             id="email"
             type="email"
             {...register('email')}
-            className="mt-1"
+            className="mt-1 p-2"
             error={errors.email?.message}
           />
         </div>
@@ -78,7 +78,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
             id="phone"
             type="tel"
             {...register('phone')}
-            className="mt-1"
+            className="mt-1 p-2"
             error={errors.phone?.message}
           />
         </div>
@@ -88,7 +88,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
           <Input
             id="address_line1"
             {...register('address_line1')}
-            className="mt-1"
+            className="mt-1 p-2"
             error={errors.address_line1?.message}
           />
         </div>
@@ -98,7 +98,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
           <Input
             id="address_line2"
             {...register('address_line2')}
-            className="mt-1"
+            className="mt-1 p-2"
           />
         </div>
 
@@ -108,7 +108,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
             <Input
               id="city"
               {...register('city')}
-              className="mt-1"
+              className="mt-1 p-2"
               error={errors.city?.message}
             />
           </div>
@@ -118,7 +118,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
             <Input
               id="state"
               {...register('state')}
-              className="mt-1"
+              className="mt-1 p-2"
               error={errors.state?.message}
             />
           </div>
@@ -130,7 +130,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
             <Input
               id="postal_code"
               {...register('postal_code')}
-              className="mt-1"
+              className="mt-1 p-2"
               error={errors.postal_code?.message}
             />
           </div>
@@ -140,7 +140,7 @@ export function DeliveryAddressForm({ onSubmit }: DeliveryAddressFormProps) {
             <Input
               id="country"
               {...register('country')}
-              className="mt-1"
+              className="mt-1 p-2"
               error={errors.country?.message}
             />
           </div>

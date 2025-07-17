@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Canvas, Rect, Image as FabricImage, Text as FabricText, IText, Circle, Triangle } from 'fabric';
-import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 import { PhotoIcon, TrashIcon, PlusIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/utils/supabase/client';
 
 interface DesignToolProps {
   onDesignUpdate?: (designData: string) => void;
@@ -67,7 +67,6 @@ export default function DesignTool({ onDesignUpdate }: DesignToolProps) {
   const [selectedColor, setSelectedColor] = useState('#000000');
   const [selectedShape, setSelectedShape] = useState('rect');
   const [selectedShapeColor, setSelectedShapeColor] = useState('#000000');
-  const supabase = createClient();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 

@@ -111,14 +111,6 @@ export default function QuickView({ isOpen, onClose, product }: QuickViewProps) 
                           <p className="text-sm text-gray-500 dark:text-gray-400">{product.color}</p>
                         </div>
                       )}
-                      {product.gender && (
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Gender</h4>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                            {product.gender}
-                          </p>
-                        </div>
-                      )}
                     </div>
 
                     <div className="mt-4">

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
+import { useTheme } from '@/contexts/ThemeContext';
 import { 
   Squares2X2Icon, 
   TagIcon,
@@ -14,26 +15,13 @@ import {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const supabase = createClient();
   const isActive = (path: string) => pathname === path;
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    // Check initial theme
-    const theme = document.documentElement.getAttribute('data-theme');
-    setIsDark(theme === 'dark');
-  }, []);
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/';
-  };
-
-  const toggleDarkMode = () => {
-    const newTheme = isDark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    setIsDark(!isDark);
   };
 
   return (
@@ -94,7 +82,7 @@ export default function AdminSidebar() {
         </Link>
 
         <button
-          onClick={toggleDarkMode}
+          onClick={toggleTheme}
           className="flex items-center w-full px-4 py-2 rounded-lg text-secondary dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 mb-2"
         >
           {isDark ? (

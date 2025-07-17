@@ -39,35 +39,7 @@ export async function GET() {
 
     if (ordersError) throw ordersError;
 
-    // Fetch user emails for the orders
-    const userIds = ordersData
-      ?.map(order => order.user_id)
-      .filter(id => id != null) as string[];
-
-    if (userIds.length > 0) {
-      const { data: usersData, error: usersError } = await supabaseAdmin
-        .from('users')
-        .select('id, email')
-        .in('id', userIds);
-
-      if (usersError) throw usersError;
-
-      // Map user emails to orders
-      const ordersWithEmails = ordersData?.map(order => ({
-        ...order,
-        user_email: usersData?.find(user => user.id === order.user_id)?.email
-      }));
-
-      return new NextResponse(JSON.stringify(ordersWithEmails), {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-    }
-
+    // For now, return orders without user emails since we're not using the users table
     return new NextResponse(JSON.stringify(ordersData), {
       headers: {
         'Content-Type': 'application/json',

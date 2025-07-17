@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import { Product } from '@/types/types';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ImageCarousel from '@/components/ImageCarousel';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/utils/supabase/client';
+import { Product } from '@/types/types';
 
 interface ProductPageProps {
   params: {
@@ -18,7 +18,6 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const { addItem } = useCart();
-  const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {
@@ -117,15 +116,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <div>
                   <h2 className="text-sm font-semibold mb-1">Color</h2>
                   <p className="text-gray-600 dark:text-gray-300">{product.color}</p>
-                </div>
-              )}
-              
-              {product.gender && (
-                <div>
-                  <h2 className="text-sm font-semibold mb-1">Gender</h2>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {product.gender.charAt(0).toUpperCase() + product.gender.slice(1)}
-                  </p>
                 </div>
               )}
             </div>

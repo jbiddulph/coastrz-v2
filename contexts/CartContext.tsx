@@ -10,30 +10,35 @@ interface CartContextType {
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   total: number;
+  isMounted: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('cart');
-      return savedCart ? JSON.parse(savedCart) : [];
-    }
-    return [];
-  });
+  const [items, setItems] = useState<CartItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // Load cart from localStorage on mount
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      setItems(JSON.parse(savedCart));
+    }
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    
     // Calculate total whenever items change
     const newTotal = items.reduce((sum, item) => sum + item.cost * item.quantity, 0);
     setTotal(newTotal);
     
     // Save to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('cart', JSON.stringify(items));
-    }
-  }, [items]);
+    localStorage.setItem('cart', JSON.stringify(items));
+  }, [items, isMounted]);
 
   const addItem = (product: Product) => {
     setItems(currentItems => {
@@ -49,7 +54,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       
       // If item doesn't exist, add it with quantity 1
-      return [...currentItems, { ...product, quantity: 1 }];
+      const cartItem: CartItem = {
+        id: product.id,
+        name: product.name,
+        description: product.description || undefined,
+        image_url: product.image_url || undefined,
+        cost: product.cost,
+        quantity: 1,
+        size: product.size || undefined,
+        color: product.color || undefined,
+        is_custom: product.is_custom,
+        design_image_url: undefined
+      };
+      
+      return [...currentItems, cartItem];
     });
   };
 
@@ -77,7 +95,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, total }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, total, isMounted }}>
       {children}
     </CartContext.Provider>
   );

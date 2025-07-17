@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+import { supabase } from '@/utils/supabase/client';
 import { DeliveryAddressForm, type DeliveryAddressFormData } from '@/app/components/DeliveryAddressForm';
 import { redirect } from 'next/navigation';
 import { Database } from '@/types/supabase';
@@ -14,7 +14,6 @@ interface CartItem {
   quantity: number;
   size?: string;
   color?: string;
-  gender?: "male" | "female" | "unisex";
 }
 
 interface ProductImage {
@@ -28,7 +27,6 @@ interface Product {
   cost: number;
   size: string | null;
   color: string | null;
-  gender: "male" | "female" | "unisex" | null;
   product_images: ProductImage[];
 }
 
@@ -39,7 +37,6 @@ interface CartItemWithProduct {
 
 async function getCartItems(): Promise<CartItem[]> {
   const cookieStore = cookies();
-  const supabase = createClient();
   
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -57,7 +54,6 @@ async function getCartItems(): Promise<CartItem[]> {
             cost,
             size,
             color,
-            gender,
             product_images (
               image_url
             )
@@ -76,7 +72,6 @@ async function getCartItems(): Promise<CartItem[]> {
         cost: item.products.cost,
         size: item.products.size || undefined,
         color: item.products.color || undefined,
-        gender: item.products.gender || undefined,
         quantity: item.quantity
       }));
     }
@@ -163,7 +158,6 @@ export default async function CheckoutPage() {
                     <p>Quantity: {item.quantity}</p>
                     {item.size && <p>Size: {item.size}</p>}
                     {item.color && <p>Color: {item.color}</p>}
-                    {item.gender && <p>Gender: {item.gender}</p>}
                   </div>
                 </div>
                 <p className="font-medium">£{(item.cost * item.quantity).toFixed(2)}</p>

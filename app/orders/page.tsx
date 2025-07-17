@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { supabase } from '@/utils/supabase/client';
 
 interface Order {
   id: string;
@@ -42,7 +42,6 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {

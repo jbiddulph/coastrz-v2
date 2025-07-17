@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import toast from 'react-hot-toast';
 import Pagination from './Pagination';
 import Search from './Search';
@@ -42,7 +42,6 @@ export default function Products({ userId }: ProductsProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const ITEMS_PER_PAGE = 20;
-  const supabase = createClient();
 
   // Form state
   const [name, setName] = useState('');
@@ -595,7 +594,7 @@ export default function Products({ userId }: ProductsProps) {
                       </div>
                       <div className="p-4">
                         <div className="flex-1">
-                          <h3 className="text-lg font-medium text-secondary">{product.name}</h3>
+                          <h3 className="text-lg text-secondary --color-secondary font-bold font-cooper-std">{product.name}</h3>
                           <p className="text-primary font-bold">£{product.cost.toFixed(2)}</p>
                         </div>
                         <div className="flex justify-between items-center mt-2">

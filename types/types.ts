@@ -4,7 +4,6 @@ export interface Product {
   description: string | null
   size: string | null
   color: string | null
-  gender: string | null
   cost: number
   sale_cost: number | null
   image_url: string | null
@@ -42,7 +41,6 @@ export interface CartItem {
   quantity: number;
   size?: string;
   color?: string;
-  gender?: "male" | "female" | "unisex";
   is_custom?: boolean;
   design_image_url?: string;
 }

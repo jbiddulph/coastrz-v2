@@ -2,15 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 import { ChevronLeftIcon, ShareIcon } from '@heroicons/react/24/solid';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ImageCarousel from '@/components/ImageCarousel';
 import Link from 'next/link';
 import { Product, ProductImage } from '@/types/types';
+import { supabase } from '@/utils/supabase/client';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ProductPage({ params }: { params: { id: string } }) {
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
   const [product, setProduct] = useState<Product | null>(null);
   const [images, setImages] = useState<ProductImage[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -18,7 +21,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const [quantity, setQuantity] = useState(1);
   const router = useRouter();
   const { addItem } = useCart();
-  const supabase = createClient();
 
   useEffect(() => {
     fetchProduct();
@@ -67,7 +69,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       .from('products')
       .select('*')
       .neq('id', currentProduct.id)
-      .eq('gender', currentProduct.gender)
       .order('created_at', { ascending: false })
       .limit(4);
 
@@ -174,7 +175,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </button>
             </div>
             
-            <p className="text-2xl font-bold text-primary mb-6">£{product.cost.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-primary mb-6">
+              <span className="text-lg font-bold transition-colors duration-200"
+                      style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}>£{product.cost.toFixed(2)}</span></p>
             
             <div className="prose prose-lg text-secondary-light mb-8">
               {product.description}
@@ -191,12 +194,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 <div>
                   <h3 className="text-sm font-medium text-secondary mb-1">Color</h3>
                   <p className="text-lg text-secondary-light">{product.color}</p>
-                </div>
-              )}
-              {product.gender && (
-                <div>
-                  <h3 className="text-sm font-medium text-secondary mb-1">Gender</h3>
-                  <p className="text-lg text-secondary-light capitalize">{product.gender}</p>
                 </div>
               )}
             </div>

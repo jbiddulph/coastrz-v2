@@ -14,7 +14,6 @@ const Products: React.FC = () => {
   const [description, setDescription] = useState('');
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'unisex' | ''>('');
   const [cost, setCost] = useState('');
   const [saleCost, setSaleCost] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -33,7 +32,6 @@ const Products: React.FC = () => {
     setDescription(product.description || '');
     setSize(product.size || '');
     setColor(product.color || '');
-    setGender((product.gender || '') as 'male' | 'female' | 'unisex' | '');
     setCost(product.cost?.toString() || '');
     setSaleCost(product.sale_cost?.toString() || '');
     setSelectedCategory(product.category_id || '');
@@ -61,7 +59,6 @@ const Products: React.FC = () => {
           description,
           size,
           color,
-          gender,
           cost: originalCost,
           sale_cost: salePrice,
           category_id: selectedCategory,
@@ -99,20 +96,6 @@ const Products: React.FC = () => {
 
   return (
     <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block mb-2 text-secondary">Gender</label>
-        <select
-          value={gender}
-          onChange={(e) => setGender(e.target.value as 'male' | 'female' | 'unisex' | '')}
-          className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option value="">Select gender</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="unisex">Unisex</option>
-        </select>
-      </div>
-
       <div>
         <label className="block mb-2 text-secondary">Cost *</label>
         <input

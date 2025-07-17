@@ -2,16 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 import { toast } from 'react-hot-toast';
 import DesignTool from '@/components/DesignTool';
 import { useCart } from '@/contexts/CartContext';
+import { supabase } from '@/utils/supabase/client';
 
 export default function DesignMyCoaster() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [designImageUrl, setDesignImageUrl] = useState<string | null>(null);
-  const supabase = createClient();
   const { addItem } = useCart();
 
   const handleAddToCart = async () => {

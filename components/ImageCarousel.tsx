@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 import { ProductImage } from '@/types/types';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 
 interface ImageCarouselProps {
   images: ProductImage[];
@@ -10,7 +10,6 @@ interface ImageCarouselProps {
 
 export default function ImageCarousel({ images, mainImage }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const supabase = createClient();
   
   // Sort images by display_order and find primary image
   const sortedImages = [...images].sort((a, b) => a.display_order - b.display_order);

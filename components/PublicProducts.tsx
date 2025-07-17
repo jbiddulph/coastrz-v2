@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import Pagination from './Pagination';
 import Search from './Search';
 import { ChevronUpIcon, ChevronDownIcon, FunnelIcon, ShoppingBagIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/solid';
@@ -13,6 +13,7 @@ import QuickView from './QuickView';
 import { Product as ProductType, ProductImage } from '@/types/types';
 import ImageCarousel from './ImageCarousel';
 import Image from 'next/image';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type SortField = 'name' | 'cost' | 'created_at' | 'size';
 type SortOrder = 'asc' | 'desc';
@@ -29,7 +30,6 @@ export default function PublicProducts() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    gender: '',
     minPrice: '',
     maxPrice: '',
     size: '',
@@ -42,9 +42,10 @@ export default function PublicProducts() {
   const [quickViewImages, setQuickViewImages] = useState<ProductImage[]>([]);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
 
   const ITEMS_PER_PAGE = 12;
-  const supabase = createClient();
 
   useEffect(() => {
     fetchCategories();
@@ -71,9 +72,6 @@ export default function PublicProducts() {
     // Apply filters
     if (searchQuery) {
       query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-    }
-    if (filters.gender) {
-      query = query.eq('gender', filters.gender);
     }
     if (filters.size) {
       query = query.eq('size', filters.size);
@@ -119,9 +117,6 @@ export default function PublicProducts() {
     // Apply filters
     if (searchQuery) {
       query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-    }
-    if (filters.gender && filters.gender !== 'all') {
-      query = query.eq('gender', filters.gender);
     }
     if (filters.size && filters.size !== 'all') {
       query = query.eq('size', filters.size);
@@ -185,7 +180,6 @@ export default function PublicProducts() {
 
   const clearFilters = () => {
     setFilters({
-      gender: '',
       minPrice: '',
       maxPrice: '',
       size: '',
@@ -196,7 +190,7 @@ export default function PublicProducts() {
     setCurrentPage(1);
   };
 
-  const renderFilterBadge = (label: string, value: string | undefined | null, filterType: 'size' | 'color' | 'gender') => {
+  const renderFilterBadge = (label: string, value: string | undefined | null, filterType: 'size' | 'color') => {
     if (!value) return null;
     
     const isActive = filters[filterType] === value;
@@ -215,9 +209,14 @@ export default function PublicProducts() {
         }}
         className={`text-xs px-2 py-1 rounded-full transition-colors ${
           isActive 
-            ? 'bg-primary text-white hover:bg-hover-primary' 
-            : 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600'
+            ? 'text-white hover:opacity-80' 
+            : 'text-primary hover:opacity-80'
         }`}
+        style={{ 
+          backgroundColor: isActive 
+            ? 'var(--color-primary)' 
+            : 'rgba(67, 198, 195, 0.1)'
+        }}
       >
         {label}: {value}
       </button>
@@ -296,7 +295,10 @@ export default function PublicProducts() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6 md:flex-row flex-col">
-        <h1 className="text-4xl font-cooper-std text-primary dark:text-primary mb-4 md:mb-0">
+        <h1 
+          className="text-4xl font-cooper-std mb-4 md:mb-0 transition-colors duration-200"
+          style={{ color: isDarkMode ? 'var(--color-primary)' : 'var(--color-secondary)' }}
+        >
           Our Products
         </h1>
         <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
@@ -438,7 +440,11 @@ export default function PublicProducts() {
           ))
         ) : (
           filteredProducts.map((product) => (
-            <div key={product.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div 
+              key={product.id} 
+              className="rounded-lg shadow-lg overflow-hidden transition-colors duration-200"
+              style={{ backgroundColor: isDarkMode ? 'var(--color-bg-tertiary)' : 'white' }}
+            >
               <div className="relative aspect-square">
                 {product.categories && product.categories[0] && (
                   <button
@@ -491,7 +497,8 @@ export default function PublicProducts() {
                   </div>
                 </Link>
               </div>
-              <div className="p-4 dark:bg-gray-800">
+              <div className="p-4 flex flex-col h-full transition-colors duration-200">
+              <div style={{ backgroundColor: isDarkMode ? 'var(--color-bg-tertiary)' : 'white' }}>
                 <Link 
                   href={product.slug === 'custom-coaster' || product.is_custom ? '/design-my-coaster' : `/product/${product.id}`} 
                   className="block group"
@@ -506,14 +513,19 @@ export default function PublicProducts() {
                       }}
                       className={`mb-2 px-2 py-1 text-xs rounded-full transition-colors ${
                         filters.category === product.categories![0].id
-                          ? 'bg-primary text-white hover:bg-hover-primary'
-                          : 'bg-gray-100 text-primary hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100'
+                          ? 'text-white hover:opacity-80'
+                          : 'text-primary hover:opacity-80'
                       }`}
+                      style={{ 
+                        backgroundColor: filters.category === product.categories![0].id
+                          ? 'var(--color-primary)'
+                          : 'rgba(67, 198, 195, 0.1)'
+                      }}
                     >
                       {product.categories![0].name}
                     </button>
                   )}
-                  <h3 className="text-lg font-semibold text-primary dark:text-gray-100 group-hover:text-primary transition-colors">
+                  <h3 className="text-lg font-semibold group-hover:text-primary transition-colors font-cooper-std" style={{ color: isDarkMode ? 'var(--color-primary)' : 'var(--color-secondary)' }}>
                     {product.name}
                   </h3>
                   {product.description && (
@@ -526,22 +538,34 @@ export default function PublicProducts() {
                   {renderFilterBadge('Size', product.size, 'size')}
                   {renderFilterBadge('Color', product.color, 'color')}
                 </div>
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-lg font-bold text-gray-900 dark:text-gray-100">£{product.cost.toFixed(2)}</span>
-                  <button
-                    onClick={(e) => handleAddToCart(product, e)}
-                    className={`bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-colors ${
-                      product.quantity === 1 && items.some(item => item.id === product.id)
-                        ? 'opacity-50 cursor-not-allowed'
-                        : ''
-                    }`}
-                    disabled={product.quantity === 1 && items.some(item => item.id === product.id)}
-                  >
-                    {product.quantity === 1 && items.some(item => item.id === product.id)
-                      ? 'Already in Cart'
-                      : 'Add to Cart'
-                    }
-                  </button>
+                
+                </div>
+                <div className="mt-4 h-full">
+                  <div className="flex items-center justify-between mt-4">
+                    <span 
+                      className="text-lg font-bold transition-colors duration-200"
+                      style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}
+                    >
+                      £{product.cost.toFixed(2)}
+                    </span>
+                    <button
+                      onClick={(e) => handleAddToCart(product, e)}
+                      className={`rounded-full px-4 py-2 text-sm text-white transition-colors ${
+                        product.quantity === 1 && items.some(item => item.id === product.id)
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:opacity-80'
+                      }`}
+                      style={{ 
+                        backgroundColor: 'var(--color-primary)'
+                      }}
+                      disabled={product.quantity === 1 && items.some(item => item.id === product.id)}
+                    >
+                      {product.quantity === 1 && items.some(item => item.id === product.id)
+                        ? 'Already in Cart'
+                        : 'Add to Cart'
+                      }
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

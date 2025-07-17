@@ -62,18 +62,7 @@ export async function GET(
       orderData.delivery_addresses = orderData.delivery_addresses[0];
     }
 
-    // Fetch user email if user_id exists
-    if (orderData.user_id) {
-      const { data: userData, error: userError } = await supabaseAdmin
-        .from('users')
-        .select('email')
-        .eq('id', orderData.user_id)
-        .single();
-
-      if (!userError && userData) {
-        orderData.user_email = userData.email;
-      }
-    }
+    // Note: user_email will not be populated since we're not using the users table
 
     console.log('Order Data:', orderData); // Add this for debugging
 
@@ -210,18 +199,7 @@ export async function PATCH(
       orderData.delivery_addresses = orderData.delivery_addresses[0];
     }
 
-    // Fetch user email if user_id exists
-    if (orderData.user_id) {
-      const { data: userData, error: userError } = await supabaseAdmin
-        .from('users')
-        .select('email')
-        .eq('id', orderData.user_id)
-        .single();
-
-      if (!userError && userData) {
-        orderData.user_email = userData.email;
-      }
-    }
+    // Note: user_email will not be populated since we're not using the users table
 
     return new NextResponse(JSON.stringify(orderData), {
       headers: {

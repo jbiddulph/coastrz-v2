@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { redirect } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
+import { supabase } from '@/utils/supabase/client';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ email: string } | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
     const checkUser = async () => {

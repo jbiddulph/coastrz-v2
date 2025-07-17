@@ -53,7 +53,7 @@ export default function ShippingAddressForm({ onSubmit, onCancel }: ShippingAddr
             required
             value={address.full_name}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
           />
         </div>
 
@@ -68,7 +68,7 @@ export default function ShippingAddressForm({ onSubmit, onCancel }: ShippingAddr
             required
             value={address.address_line1}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
           />
         </div>
 
@@ -82,7 +82,7 @@ export default function ShippingAddressForm({ onSubmit, onCancel }: ShippingAddr
             name="address_line2"
             value={address.address_line2}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
           />
         </div>
 
@@ -98,7 +98,7 @@ export default function ShippingAddressForm({ onSubmit, onCancel }: ShippingAddr
               required
               value={address.city}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+              className="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
             />
           </div>
 
@@ -113,7 +113,7 @@ export default function ShippingAddressForm({ onSubmit, onCancel }: ShippingAddr
               required
               value={address.state}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+              className="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
             />
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function ShippingAddressForm({ onSubmit, onCancel }: ShippingAddr
               required
               value={address.postal_code}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+              className="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
             />
           </div>
 
@@ -145,7 +145,7 @@ export default function ShippingAddressForm({ onSubmit, onCancel }: ShippingAddr
               required
               value={address.country}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+              className="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
             />
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function ShippingAddressForm({ onSubmit, onCancel }: ShippingAddr
             name="phone"
             value={address.phone}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            className="p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
           />
         </div>
 

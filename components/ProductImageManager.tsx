@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import { XCircleIcon, ArrowUpIcon, ArrowDownIcon, StarIcon } from '@heroicons/react/24/solid';
 import { toast } from 'react-hot-toast';
 import { ProductImage } from '@/types/types';
@@ -13,7 +13,6 @@ interface ProductImageManagerProps {
 export default function ProductImageManager({ productId }: ProductImageManagerProps) {
   const [images, setImages] = useState<ProductImage[]>([]);
   const [uploading, setUploading] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
     fetchImages();

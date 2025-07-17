@@ -1,10 +1,59 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          req.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: any) {
+          req.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
 
   // Refresh session if expired
   const {
@@ -13,7 +62,7 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession()
 
   // Add the request pathname to a header to use it in the layout
-  res.headers.set('x-pathname', req.nextUrl.pathname)
+  response.headers.set('x-pathname', req.nextUrl.pathname)
 
   // Check if accessing a protected route (orders)
   if (req.nextUrl.pathname.startsWith('/orders')) {
@@ -25,7 +74,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return res
+  return response
 }
 
 export const config = {

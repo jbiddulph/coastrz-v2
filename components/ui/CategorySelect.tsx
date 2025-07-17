@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 
 interface Category {
   id: string;
@@ -17,7 +17,6 @@ interface CategorySelectProps {
 export default function CategorySelect({ value, onChange, required = false, className = '' }: CategorySelectProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     async function fetchCategories() {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import toast from 'react-hot-toast';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import { ProductImage, ImageFile } from '@/types/types';
@@ -13,7 +13,6 @@ interface AddProductFormProps {
 
 export default function AddProductForm({ userId, onClose, onProductAdded }: AddProductFormProps) {
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   // Form state
   const [name, setName] = useState('');

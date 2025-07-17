@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import Auth from '@/components/Auth';
 
 export default function Login() {
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -31,13 +30,13 @@ export default function Login() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12">
+    <main className="min-h-screen bg-bg-main py-12">
       <div className="max-w-md mx-auto px-4">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 font-cooper-std">Welcome Back</h1>
-          <p className="text-gray-600">Please sign in to access your account.</p>
+          <h1 className="text-3xl font-bold text-secondary mb-2 font-cooper-std">Welcome Back</h1>
+          <p className="text-secondary-light">Please sign in to access your account.</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-bg-main border border-secondary-border rounded-lg shadow-sm p-6">
           <Auth />
         </div>
       </div>
