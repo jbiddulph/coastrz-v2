@@ -4,7 +4,13 @@ import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
-export default function Error({ error, reset }) {
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
