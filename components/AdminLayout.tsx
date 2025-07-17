@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/client';
 import { HiMenu, HiX } from 'react-icons/hi';
 import { FiPackage, FiCheckSquare, FiUser, FiLogOut } from 'react-icons/fi';
 import ThemeToggle from './ThemeToggle';

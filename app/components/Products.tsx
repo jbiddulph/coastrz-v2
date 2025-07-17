@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product, ProductImage } from '@/types/types';
-import { createClient } from '@/utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import toast from 'react-hot-toast';
 
 interface ProductWithImages extends Product {
@@ -22,8 +22,6 @@ const Products: React.FC = () => {
   const [finalImageUrl, setFinalImageUrl] = useState<string | null>(null);
   const [newStatus, setNewStatus] = useState<'in_stock' | 'sold_out'>('in_stock');
   const [products, setProducts] = useState<ProductWithImages[]>([]);
-
-  const supabase = createClient();
 
   // Set form fields for editing
   const setEditForm = (product: ProductWithImages) => {
