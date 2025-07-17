@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   // Check for environment variables
   if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {

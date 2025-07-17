@@ -1,33 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingBagIcon, Bars3Icon, XMarkIcon, UserIcon } from '@heroicons/react/24/outline';
-import { supabase } from '@/utils/supabase/client';
-import ThemeToggle from './ThemeToggle';
+import { ShoppingBagIcon } from '@heroicons/react/24/outline';
 import { useTheme } from '@/contexts/ThemeContext';
+import { usePathname } from 'next/navigation';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { items, isMounted } = useCart();
-  const itemCount = items.length;
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { theme } = useTheme();
+  const pathname = usePathname();
+  
+  // Don't render navbar on admin routes
+  const isAdminRoute = pathname?.startsWith('/admin');
+  if (isAdminRoute) {
+    return null;
+  }
+
   const isDarkMode = theme === 'dark';
 
   const menuItems = [
-    { name: 'All Products', href: '/' },
-    // { name: 'New Arrivals', href: '/?sort=new' },
-    // { name: 'Featured', href: '/?sort=featured' },
-    // { name: 'Sale', href: '/?sort=sale' },
+    { name: 'Home', href: '/' },
+    { name: 'Products', href: '/products' },
+    { name: 'About', href: '/about' },
+    { name: 'Contact', href: '/contact' },
+    { name: 'FAQ', href: '/faq' },
   ];
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsLoggedIn(!!session);
-    });
-  }, []);
 
   return (
     <nav 
@@ -66,75 +65,28 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             <ThemeToggle />
             
-            <Link
-              href="/cart"
-              className={`p-2 relative transition-colors duration-200 ${
-                isDarkMode 
-                  ? 'text-gray-300 hover:text-white' 
-                  : 'text-secondary hover:text-primary'
-              }`}
-            >
+            <Link href="/cart" className="relative p-2 text-secondary hover:text-primary transition-colors">
               <ShoppingBagIcon className="h-6 w-6" />
-              {isMounted && itemCount > 0 && (
-                <span className="absolute top-0 right-0 -mt-1 -mr-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {itemCount}
+              {isMounted && items.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {items.length}
                 </span>
               )}
             </Link>
 
-            <Link
-              href={isLoggedIn ? "/profile" : "/login"}
-              className={`p-2 transition-colors duration-200 ${
+            <Link 
+              href="/login" 
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                 isDarkMode 
-                  ? 'text-gray-300 hover:text-white' 
-                  : 'text-secondary hover:text-primary'
+                  ? 'text-white bg-gray-700 hover:bg-gray-600' 
+                  : 'text-white bg-primary hover:bg-hover-primary'
               }`}
             >
-              <UserIcon className="h-6 w-6" />
+              Login
             </Link>
-
-            <div className="sm:hidden">
-              <button
-                type="button"
-                className={`p-2 transition-colors duration-200 ${
-                  isDarkMode 
-                    ? 'text-gray-300 hover:text-white' 
-                    : 'text-secondary hover:text-primary'
-                }`}
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                {isMobileMenuOpen ? (
-                  <XMarkIcon className="h-6 w-6" />
-                ) : (
-                  <Bars3Icon className="h-6 w-6" />
-                )}
-              </button>
-            </div>
           </div>
         </div>
       </div>
-
-      {/* Mobile menu */}
-      {isMobileMenuOpen && (
-        <div className="sm:hidden transition-colors duration-200" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-          <div className="pt-2 pb-3 space-y-1">
-            {menuItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`block px-3 py-2 text-base font-medium transition-colors duration-200 ${
-                  isDarkMode 
-                    ? 'text-gray-300 hover:text-white hover:bg-gray-800' 
-                    : 'text-secondary hover:text-primary hover:bg-gray-50'
-                }`}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
     </nav>
   );
 } 

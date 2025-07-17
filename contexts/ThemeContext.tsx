@@ -12,6 +12,13 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Default values for SSR
+const defaultThemeContext: ThemeContextType = {
+  theme: 'light',
+  toggleTheme: () => {},
+  isMounted: false,
+};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
   const [isMounted, setIsMounted] = useState(false);
@@ -31,26 +38,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isMounted) {
-      // Update document class and localStorage
-      document.documentElement.classList.remove('light', 'dark');
-      document.documentElement.classList.add(theme);
+      // Update document attribute and localStorage
+      document.documentElement.setAttribute('data-theme', theme);
       localStorage.setItem('theme', theme);
     }
   }, [theme, isMounted]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
   };
 
-  // Provide default values during SSR
-  const value: ThemeContextType = {
+  const contextValue: ThemeContextType = {
     theme,
     toggleTheme,
     isMounted,
   };
 
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );
@@ -58,13 +63,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
+  
+  // Return default values during SSR or if context is not available
   if (context === undefined) {
-    // Return default values if context is not available (during SSR)
-    return {
-      theme: 'light',
-      toggleTheme: () => {},
-      isMounted: false,
-    };
+    return defaultThemeContext;
   }
+  
   return context;
 } 

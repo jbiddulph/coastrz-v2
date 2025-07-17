@@ -26,39 +26,43 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// Default values for SSR
+const defaultCartContext: CartContextType = {
+  items: [],
+  addItem: () => {},
+  removeItem: () => {},
+  updateQuantity: () => {},
+  clearCart: () => {},
+  total: 0,
+  isMounted: false,
+};
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // Load cart from localStorage on mount
-    try {
-      const savedCart = localStorage.getItem('cart');
-      if (savedCart) {
+    // Load cart from localStorage
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      try {
         const parsedCart = JSON.parse(savedCart);
         if (Array.isArray(parsedCart)) {
           setItems(parsedCart);
         }
+      } catch (error) {
+        console.error('Error parsing saved cart:', error);
       }
-    } catch (error) {
-      console.warn('Could not load cart from localStorage:', error);
     }
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    // Save cart to localStorage whenever items change
     if (isMounted) {
-      try {
-        localStorage.setItem('cart', JSON.stringify(items));
-      } catch (error) {
-        console.warn('Could not save cart to localStorage:', error);
-      }
+      // Save cart to localStorage
+      localStorage.setItem('cart', JSON.stringify(items));
     }
   }, [items, isMounted]);
-
-  // Calculate total whenever items change
-  const total = items.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
 
   const addItem = (product: Product, quantity: number = 1) => {
     setItems(prevItems => {
@@ -93,22 +97,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
       removeItem(id);
-      return;
+    } else {
+      setItems(prevItems =>
+        prevItems.map(item =>
+          item.id === id ? { ...item, quantity } : item
+        )
+      );
     }
-    
-    setItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, quantity } : item
-      )
-    );
   };
 
   const clearCart = () => {
     setItems([]);
   };
 
-  // Provide default values during SSR
-  const value: CartContextType = {
+  // Calculate total
+  const total = items.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
+
+  const contextValue: CartContextType = {
     items,
     addItem,
     removeItem,
@@ -119,7 +124,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <CartContext.Provider value={value}>
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   );
@@ -127,17 +132,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 export function useCart(): CartContextType {
   const context = useContext(CartContext);
+  
+  // Return default values during SSR or if context is not available
   if (context === undefined) {
-    // Return default values if context is not available (during SSR)
-    return {
-      items: [],
-      addItem: () => {},
-      removeItem: () => {},
-      updateQuantity: () => {},
-      clearCart: () => {},
-      total: 0,
-      isMounted: false,
-    };
+    return defaultCartContext;
   }
+  
   return context;
 } 

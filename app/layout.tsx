@@ -1,30 +1,26 @@
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import './fonts.css'
-import { Inter } from 'next/font/google'
-import { Toaster } from 'react-hot-toast';
-import { CartProvider } from '@/contexts/CartContext';
-import Footer from '@/components/Footer';
-import { Providers } from './providers';
-import Navbar from '@/components/Navbar';
-import { headers } from 'next/headers';
+import { Providers } from './providers'
+import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
-  title: 'CoastrZ Shop',
-  description: 'Your one-stop shop for all your needs',
+export const metadata: Metadata = {
+  title: 'Coastrz - Custom Coasters',
+  description: 'Design and order your own custom coasters',
 }
+
+// Force dynamic rendering to prevent static generation errors
+export const dynamic = 'force-dynamic';
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Get the current pathname from headers
-  const headersList = headers();
-  const pathname = headersList.get("x-pathname") || "";
-  const isAdminRoute = pathname.startsWith('/admin');
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -53,11 +49,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <div className="flex min-h-screen flex-col">
-            {!isAdminRoute && <Navbar />}
+            <Navbar />
             <main className="flex-grow">
               {children}
             </main>
-            {!isAdminRoute && <Footer />}
+            <Footer />
           </div>
         </Providers>
       </body>

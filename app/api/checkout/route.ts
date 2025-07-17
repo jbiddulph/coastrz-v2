@@ -3,6 +3,9 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = 'force-dynamic';
+
 interface CartItem {
   id: string;
   name: string;
