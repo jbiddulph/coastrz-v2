@@ -9,7 +9,6 @@ const nextConfig = {
       },
     ],
   },
-  // Disable static generation completely
   trailingSlash: false,
 }
 
