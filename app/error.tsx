@@ -1,14 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function Error({ error, reset }) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
@@ -36,4 +32,4 @@ export default function Error({
       </div>
     </div>
   );
-} 
+}
