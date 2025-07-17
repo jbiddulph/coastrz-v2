@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // Disable static generation completely
+  trailingSlash: false,
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -11,7 +13,6 @@ const nextConfig = {
       },
     ],
   },
-  trailingSlash: false,
 }
 
 module.exports = nextConfig
