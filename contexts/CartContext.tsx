@@ -20,6 +20,7 @@ interface CartContextType {
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
+  total: number;
   isMounted: boolean;
 }
 
@@ -55,6 +56,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [items, isMounted]);
+
+  // Calculate total whenever items change
+  const total = items.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
 
   const addItem = (product: Product, quantity: number = 1) => {
     setItems(prevItems => {
@@ -110,6 +114,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeItem,
     updateQuantity,
     clearCart,
+    total,
     isMounted,
   };
 
@@ -130,6 +135,7 @@ export function useCart(): CartContextType {
       removeItem: () => {},
       updateQuantity: () => {},
       clearCart: () => {},
+      total: 0,
       isMounted: false,
     };
   }

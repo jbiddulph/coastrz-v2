@@ -11,10 +11,6 @@ const nextConfig = {
       },
     ],
   },
-  // Force all pages to be dynamic
-  experimental: {
-    appDir: true,
-  },
   // Disable static generation completely
   trailingSlash: false,
 }
