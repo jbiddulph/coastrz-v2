@@ -30,46 +30,63 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const savedTheme = localStorage.getItem('theme') as Theme;
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       
-      const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-      setThemeState(initialTheme);
-      document.documentElement.setAttribute('data-theme', initialTheme);
+      if (savedTheme) {
+        setThemeState(savedTheme);
+      } else if (prefersDark) {
+        setThemeState('dark');
+      }
     } catch (error) {
-      console.error('Error reading theme from localStorage:', error);
+      console.warn('Could not read theme from localStorage:', error);
     }
   }, []);
 
+  useEffect(() => {
+    if (mounted) {
+      // Update document class and CSS variables
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      
+      // Set CSS custom properties
+      if (theme === 'dark') {
+        document.documentElement.style.setProperty('--color-bg-main', '#1a1a1a');
+        document.documentElement.style.setProperty('--color-bg-secondary', '#2d2d2d');
+        document.documentElement.style.setProperty('--color-text-primary', '#ffffff');
+        document.documentElement.style.setProperty('--color-text-secondary', '#e5e5e5');
+        document.documentElement.style.setProperty('--color-border', '#404040');
+      } else {
+        document.documentElement.style.setProperty('--color-bg-main', '#ffffff');
+        document.documentElement.style.setProperty('--color-bg-secondary', '#f9fafb');
+        document.documentElement.style.setProperty('--color-text-primary', '#111827');
+        document.documentElement.style.setProperty('--color-text-secondary', '#6b7280');
+        document.documentElement.style.setProperty('--color-border', '#d1d5db');
+      }
+    }
+  }, [theme, mounted]);
+
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    if (mounted) {
-      try {
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-      } catch (error) {
-        console.error('Error setting theme:', error);
-      }
+    try {
+      localStorage.setItem('theme', newTheme);
+    } catch (error) {
+      console.warn('Could not save theme to localStorage:', error);
     }
   };
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-  };
-
-  // Provide a default context value during SSR
-  const contextValue: ThemeContextType = {
-    theme,
-    toggleTheme,
-    setTheme
+    setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
   return (
-    <ThemeContext.Provider value={contextValue}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
-export function useTheme() {
+export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
+  if (!context) {
+    // Return default values if context is not available (during SSR)
+    return defaultContextValue;
+  }
   return context;
 } 

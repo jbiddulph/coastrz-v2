@@ -36,75 +36,71 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const savedCart = localStorage.getItem('cart');
       if (savedCart) {
-        setItems(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+        setItems(parsedCart);
       }
     } catch (error) {
-      console.error('Error loading cart from localStorage:', error);
+      console.warn('Could not load cart from localStorage:', error);
     }
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isMounted) return;
-    
-    // Calculate total whenever items change
-    const newTotal = items.reduce((sum, item) => sum + item.cost * item.quantity, 0);
-    setTotal(newTotal);
-    
-    // Save to localStorage
-    try {
-      localStorage.setItem('cart', JSON.stringify(items));
-    } catch (error) {
-      console.error('Error saving cart to localStorage:', error);
+    // Save cart to localStorage whenever items change
+    if (isMounted) {
+      try {
+        localStorage.setItem('cart', JSON.stringify(items));
+      } catch (error) {
+        console.warn('Could not save cart to localStorage:', error);
+      }
     }
   }, [items, isMounted]);
 
+  useEffect(() => {
+    // Calculate total whenever items change
+    const newTotal = items.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
+    setTotal(newTotal);
+  }, [items]);
+
   const addItem = (product: Product) => {
-    setItems(currentItems => {
-      const existingItem = currentItems.find(item => item.id === product.id);
-      
+    setItems(prevItems => {
+      const existingItem = prevItems.find(item => item.id === product.id);
       if (existingItem) {
-        // If item exists, increment quantity
-        return currentItems.map(item =>
+        return prevItems.map(item =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
+      } else {
+        const cartItem: CartItem = {
+          id: product.id,
+          name: product.name,
+          description: product.description || undefined,
+          image_url: product.image_url || undefined,
+          cost: product.cost,
+          quantity: 1,
+          size: product.size || undefined,
+          color: product.color || undefined,
+          is_custom: product.is_custom,
+          design_image_url: undefined
+        };
+        return [...prevItems, cartItem];
       }
-      
-      // If item doesn't exist, add it with quantity 1
-      const cartItem: CartItem = {
-        id: product.id,
-        name: product.name,
-        description: product.description || undefined,
-        image_url: product.image_url || undefined,
-        cost: product.cost,
-        quantity: 1,
-        size: product.size || undefined,
-        color: product.color || undefined,
-        is_custom: product.is_custom,
-        design_image_url: undefined
-      };
-      
-      return [...currentItems, cartItem];
     });
   };
 
   const removeItem = (productId: string) => {
-    setItems(currentItems => currentItems.filter(item => item.id !== productId));
+    setItems(prevItems => prevItems.filter(item => item.id !== productId));
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity < 1) {
+    if (quantity <= 0) {
       removeItem(productId);
       return;
     }
-
-    setItems(currentItems =>
-      currentItems.map(item =>
-        item.id === productId
-          ? { ...item, quantity }
-          : item
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item.id === productId ? { ...item, quantity } : item
       )
     );
   };
@@ -113,25 +109,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   };
 
-  // Provide a default context value during SSR
-  const contextValue: CartContextType = {
-    items,
-    addItem,
-    removeItem,
-    updateQuantity,
-    clearCart,
-    total,
-    isMounted
-  };
-
   return (
-    <CartContext.Provider value={contextValue}>
+    <CartContext.Provider value={{
+      items,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
+      total,
+      isMounted
+    }}>
       {children}
     </CartContext.Provider>
   );
 }
 
-export function useCart() {
+export function useCart(): CartContextType {
   const context = useContext(CartContext);
+  if (!context) {
+    // Return default values if context is not available (during SSR)
+    return defaultContextValue;
+  }
   return context;
 } 
