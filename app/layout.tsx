@@ -10,11 +10,10 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Coastrz - Custom Coasters',
-  description: 'Design and order your own custom coasters',
+  description: 'Design and order custom coasters for your home or business',
 }
 
-// Force dynamic rendering to prevent static generation errors
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 export default function RootLayout({
   children,
@@ -46,7 +45,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Navbar />
