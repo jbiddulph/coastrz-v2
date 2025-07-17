@@ -52,16 +52,13 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <Providers>
-          <CartProvider>
-            <div className="flex min-h-screen flex-col">
-              {!isAdminRoute && <Navbar />}
-              <main className="flex-grow">
-                {children}
-              </main>
-              {!isAdminRoute && <Footer />}
-            </div>
-          </CartProvider>
-          <Toaster position="bottom-right" />
+          <div className="flex min-h-screen flex-col">
+            {!isAdminRoute && <Navbar />}
+            <main className="flex-grow">
+              {children}
+            </main>
+            {!isAdminRoute && <Footer />}
+          </div>
         </Providers>
       </body>
     </html>
