@@ -12,7 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  // During SSR, render children without contexts to prevent errors
+  // During SSR and initial render, render children without contexts to prevent errors
   if (!mounted) {
     return (
       <>
@@ -22,6 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Only render contexts after component has mounted on client
   return (
     <ThemeProvider>
       <CartProvider>

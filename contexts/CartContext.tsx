@@ -1,34 +1,32 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product, CartItem } from '@/types/types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Product } from '@/types/types';
+
+interface CartItem {
+  id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  cost: number;
+  quantity: number;
+  size?: string;
+  color?: string;
+}
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: Product) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (product: Product, quantity?: number) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  total: number;
   isMounted: boolean;
 }
 
-// Provide a default context value to prevent null errors during SSR
-const defaultContextValue: CartContextType = {
-  items: [],
-  addItem: () => {},
-  removeItem: () => {},
-  updateQuantity: () => {},
-  clearCart: () => {},
-  total: 0,
-  isMounted: false,
-};
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CartContext = createContext<CartContextType>(defaultContextValue);
-
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [total, setTotal] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -37,7 +35,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const savedCart = localStorage.getItem('cart');
       if (savedCart) {
         const parsedCart = JSON.parse(savedCart);
-        setItems(parsedCart);
+        if (Array.isArray(parsedCart)) {
+          setItems(parsedCart);
+        }
       }
     } catch (error) {
       console.warn('Could not load cart from localStorage:', error);
@@ -56,51 +56,45 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, isMounted]);
 
-  useEffect(() => {
-    // Calculate total whenever items change
-    const newTotal = items.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
-    setTotal(newTotal);
-  }, [items]);
-
-  const addItem = (product: Product) => {
+  const addItem = (product: Product, quantity: number = 1) => {
     setItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
+      
       if (existingItem) {
         return prevItems.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       } else {
-        const cartItem: CartItem = {
+        const newItem: CartItem = {
           id: product.id,
           name: product.name,
           description: product.description || undefined,
           image_url: product.image_url || undefined,
           cost: product.cost,
-          quantity: 1,
+          quantity,
           size: product.size || undefined,
           color: product.color || undefined,
-          is_custom: product.is_custom,
-          design_image_url: undefined
         };
-        return [...prevItems, cartItem];
+        return [...prevItems, newItem];
       }
     });
   };
 
-  const removeItem = (productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== productId));
+  const removeItem = (id: string) => {
+    setItems(prevItems => prevItems.filter(item => item.id !== id));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(id);
       return;
     }
+    
     setItems(prevItems =>
       prevItems.map(item =>
-        item.id === productId ? { ...item, quantity } : item
+        item.id === id ? { ...item, quantity } : item
       )
     );
   };
@@ -109,16 +103,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   };
 
+  // Provide default values during SSR
+  const value: CartContextType = {
+    items,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    isMounted,
+  };
+
   return (
-    <CartContext.Provider value={{
-      items,
-      addItem,
-      removeItem,
-      updateQuantity,
-      clearCart,
-      total,
-      isMounted
-    }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );
@@ -126,9 +122,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useCart(): CartContextType {
   const context = useContext(CartContext);
-  if (!context) {
+  if (context === undefined) {
     // Return default values if context is not available (during SSR)
-    return defaultContextValue;
+    return {
+      items: [],
+      addItem: () => {},
+      removeItem: () => {},
+      updateQuantity: () => {},
+      clearCart: () => {},
+      isMounted: false,
+    };
   }
   return context;
 } 

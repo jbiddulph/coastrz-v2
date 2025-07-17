@@ -1,82 +1,56 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
+  isMounted: boolean;
 }
 
-// Provide a default context value to prevent null errors during SSR
-const defaultContextValue: ThemeContextType = {
-  theme: 'light',
-  toggleTheme: () => {},
-  setTheme: () => {},
-};
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const ThemeContext = createContext<ThemeContextType>(defaultContextValue);
-
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setTheme] = useState<Theme>('light');
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    // On mount, read the theme from localStorage or system preference
-    try {
-      const savedTheme = localStorage.getItem('theme') as Theme;
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      
-      if (savedTheme) {
-        setThemeState(savedTheme);
-      } else if (prefersDark) {
-        setThemeState('dark');
-      }
-    } catch (error) {
-      console.warn('Could not read theme from localStorage:', error);
+    // Get theme from localStorage or default to 'light'
+    const savedTheme = localStorage.getItem('theme') as Theme;
+    if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
+      setTheme(savedTheme);
+    } else {
+      // Check system preference
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      setTheme(systemTheme);
     }
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted) {
-      // Update document class and CSS variables
-      document.documentElement.classList.toggle('dark', theme === 'dark');
-      
-      // Set CSS custom properties
-      if (theme === 'dark') {
-        document.documentElement.style.setProperty('--color-bg-main', '#1a1a1a');
-        document.documentElement.style.setProperty('--color-bg-secondary', '#2d2d2d');
-        document.documentElement.style.setProperty('--color-text-primary', '#ffffff');
-        document.documentElement.style.setProperty('--color-text-secondary', '#e5e5e5');
-        document.documentElement.style.setProperty('--color-border', '#404040');
-      } else {
-        document.documentElement.style.setProperty('--color-bg-main', '#ffffff');
-        document.documentElement.style.setProperty('--color-bg-secondary', '#f9fafb');
-        document.documentElement.style.setProperty('--color-text-primary', '#111827');
-        document.documentElement.style.setProperty('--color-text-secondary', '#6b7280');
-        document.documentElement.style.setProperty('--color-border', '#d1d5db');
-      }
+    if (isMounted) {
+      // Update document class and localStorage
+      document.documentElement.classList.remove('light', 'dark');
+      document.documentElement.classList.add(theme);
+      localStorage.setItem('theme', theme);
     }
-  }, [theme, mounted]);
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    try {
-      localStorage.setItem('theme', newTheme);
-    } catch (error) {
-      console.warn('Could not save theme to localStorage:', error);
-    }
-  };
+  }, [theme, isMounted]);
 
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  // Provide default values during SSR
+  const value: ThemeContextType = {
+    theme,
+    toggleTheme,
+    isMounted,
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
@@ -84,9 +58,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
-  if (!context) {
+  if (context === undefined) {
     // Return default values if context is not available (during SSR)
-    return defaultContextValue;
+    return {
+      theme: 'light',
+      toggleTheme: () => {},
+      isMounted: false,
+    };
   }
   return context;
 } 
