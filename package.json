@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "heroku-postbuild": "npm run build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
-    "start": "next start",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint"
   },
   "dependencies": {
