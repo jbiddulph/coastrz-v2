@@ -1,25 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useTheme } from '@/contexts/ThemeContext';
 
 export default function NotFound() {
-  const { theme } = useTheme();
-  const isDarkMode = theme === 'dark';
-
   return (
-    <div className="min-h-screen bg-bg-main flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
       <div className="text-center">
-        <h1 className="text-6xl font-bold text-primary mb-4">404</h1>
-        <h2 className="text-2xl font-semibold mb-4" style={{ color: isDarkMode ? 'var(--color-secondary)' : 'var(--color-secondary)' }}>
+        <h1 className="text-6xl font-bold text-blue-600 mb-4">404</h1>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">
           Page Not Found
         </h2>
-        <p className="text-secondary-light mb-8">
+        <p className="text-gray-600 dark:text-gray-300 mb-8">
           The page you're looking for doesn't exist.
         </p>
         <Link 
           href="/"
-          className="inline-block bg-primary text-white px-6 py-3 rounded-lg hover:bg-hover-primary transition-colors"
+          className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
         >
           Go Home
         </Link>
