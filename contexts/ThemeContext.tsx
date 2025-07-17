@@ -10,25 +10,44 @@ interface ThemeContextType {
   setTheme: (theme: Theme) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+// Provide a default context value to prevent null errors during SSR
+const defaultContextValue: ThemeContextType = {
+  theme: 'light',
+  toggleTheme: () => {},
+  setTheme: () => {},
+};
+
+const ThemeContext = createContext<ThemeContextType>(defaultContextValue);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     // On mount, read the theme from localStorage or system preference
-    const savedTheme = localStorage.getItem('theme') as Theme;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    setThemeState(initialTheme);
-    document.documentElement.setAttribute('data-theme', initialTheme);
+    try {
+      const savedTheme = localStorage.getItem('theme') as Theme;
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+      setThemeState(initialTheme);
+      document.documentElement.setAttribute('data-theme', initialTheme);
+    } catch (error) {
+      console.error('Error reading theme from localStorage:', error);
+    }
   }, []);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    if (mounted) {
+      try {
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+      } catch (error) {
+        console.error('Error setting theme:', error);
+      }
+    }
   };
 
   const toggleTheme = () => {
@@ -36,8 +55,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme(newTheme);
   };
 
+  // Provide a default context value during SSR
+  const contextValue: ThemeContextType = {
+    theme,
+    toggleTheme,
+    setTheme
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );
@@ -45,8 +71,5 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
   return context;
 } 

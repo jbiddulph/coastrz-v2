@@ -13,7 +13,18 @@ interface CartContextType {
   isMounted: boolean;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+// Provide a default context value to prevent null errors during SSR
+const defaultContextValue: CartContextType = {
+  items: [],
+  addItem: () => {},
+  removeItem: () => {},
+  updateQuantity: () => {},
+  clearCart: () => {},
+  total: 0,
+  isMounted: false,
+};
+
+const CartContext = createContext<CartContextType>(defaultContextValue);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -22,9 +33,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Load cart from localStorage on mount
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setItems(JSON.parse(savedCart));
+    try {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        setItems(JSON.parse(savedCart));
+      }
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
     }
     setIsMounted(true);
   }, []);
@@ -37,7 +52,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setTotal(newTotal);
     
     // Save to localStorage
-    localStorage.setItem('cart', JSON.stringify(items));
+    try {
+      localStorage.setItem('cart', JSON.stringify(items));
+    } catch (error) {
+      console.error('Error saving cart to localStorage:', error);
+    }
   }, [items, isMounted]);
 
   const addItem = (product: Product) => {
@@ -94,8 +113,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   };
 
+  // Provide a default context value during SSR
+  const contextValue: CartContextType = {
+    items,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    total,
+    isMounted
+  };
+
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, total, isMounted }}>
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   );
@@ -103,8 +133,5 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
   return context;
 } 
