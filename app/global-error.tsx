@@ -1,7 +1,3 @@
-'use client';
-
-import { useEffect } from 'react';
-
 export const dynamic = 'force-dynamic';
 
 export default function GlobalError({
@@ -11,11 +7,6 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    // Log the error to an error reporting service
-    console.error(error);
-  }, [error]);
-
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="text-center">
