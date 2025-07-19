@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '@/types/types';
+import { getActualPrice } from '@/utils/utils';
 
 interface CartItem {
   id: string;
@@ -80,7 +81,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           name: product.name,
           description: product.description || undefined,
           image_url: product.image_url || undefined,
-          cost: product.cost,
+          cost: getActualPrice(product),
           quantity,
           size: product.size || undefined,
           color: product.color || undefined,

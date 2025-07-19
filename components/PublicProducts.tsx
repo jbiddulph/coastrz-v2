@@ -14,6 +14,7 @@ import { Product as ProductType, ProductImage } from '@/types/types';
 import ImageCarousel from './ImageCarousel';
 import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
+import { getDisplayPrice, hasSalePrice } from '@/utils/utils';
 
 type SortField = 'name' | 'cost' | 'created_at' | 'size';
 type SortOrder = 'asc' | 'desc';
@@ -542,12 +543,19 @@ export default function PublicProducts() {
                 </div>
                 <div className="mt-4 h-full">
                   <div className="flex items-center justify-between mt-4">
-                    <span 
-                      className="text-lg font-bold transition-colors duration-200"
-                      style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}
-                    >
-                      £{product.cost.toFixed(2)}
-                    </span>
+                    <div className="flex flex-col">
+                      <span 
+                        className="text-lg font-bold transition-colors duration-200"
+                        style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}
+                      >
+                        {getDisplayPrice(product)}
+                      </span>
+                      {hasSalePrice(product) && (
+                        <span className="text-sm text-gray-500 line-through">
+                          £{product.cost.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={(e) => handleAddToCart(product, e)}
                       className={`rounded-full px-4 py-2 text-sm text-white transition-colors ${

@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { Product, ProductImage } from '@/types/types';
 import { supabase } from '@/utils/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
+import { getDisplayPrice, hasSalePrice } from '@/utils/utils';
 
 // Force dynamic rendering to prevent static generation errors
 export const dynamic = 'force-dynamic';
@@ -178,9 +179,19 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </button>
             </div>
             
-            <p className="text-2xl font-bold text-primary mb-6">
-              <span className="text-lg font-bold transition-colors duration-200"
-                      style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}>£{product.cost.toFixed(2)}</span></p>
+            <div className="mb-6">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold transition-colors duration-200"
+                      style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}>
+                  {getDisplayPrice(product)}
+                </span>
+                {hasSalePrice(product) && (
+                  <span className="text-lg text-gray-500 line-through">
+                    £{product.cost.toFixed(2)}
+                  </span>
+                )}
+              </div>
+            </div>
             
             <div className="prose prose-lg text-secondary-light mb-8">
               {product.description}
@@ -254,7 +265,14 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   </div>
                   <div className="p-4">
                     <h3 className="text-lg font-medium text-secondary mb-2">{relatedProduct.name}</h3>
-                    <p className="text-primary font-bold">£{relatedProduct.cost.toFixed(2)}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-primary font-bold">{getDisplayPrice(relatedProduct)}</p>
+                      {hasSalePrice(relatedProduct) && (
+                        <span className="text-sm text-gray-500 line-through">
+                          £{relatedProduct.cost.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </Link>
               ))}

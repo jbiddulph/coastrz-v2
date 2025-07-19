@@ -6,6 +6,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Product } from '@/types/types'
 import { useCart } from '@/contexts/CartContext'
 import { toast } from 'react-hot-toast'
+import { getDisplayPrice, hasSalePrice } from '@/utils/utils'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -116,9 +117,16 @@ export default function QuickView({ isOpen, onClose, product }: QuickViewProps) 
                     </div>
 
                     <div className="mt-4">
-                      <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                        £{product.cost.toFixed(2)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                          {getDisplayPrice(product)}
+                        </p>
+                        {hasSalePrice(product) && (
+                          <span className="text-sm text-gray-500 line-through">
+                            £{product.cost.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="mt-6 flex flex-col gap-3">

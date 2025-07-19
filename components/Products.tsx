@@ -9,6 +9,7 @@ import { Squares2X2Icon as ViewGridIcon, ListBulletIcon as ViewListIcon, XMarkIc
 import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 import { colors } from '@/utils/colors';
 import { Product, ProductImage, ImageFile } from '@/types/types';
+import { getDisplayPrice, hasSalePrice } from '@/utils/utils';
 
 interface Category {
   id: string;
@@ -215,6 +216,8 @@ export default function Products({ userId }: ProductsProps) {
     setDescription(product.description || '');
     setSize(product.size || '');
     setColor(product.color || '');
+    setCost(product.cost.toString());
+    setSaleCost(product.sale_cost ? product.sale_cost.toString() : '');
     setSelectedCategory(product.category_id || '');
     setShowEditModal(true);
     
@@ -595,7 +598,14 @@ export default function Products({ userId }: ProductsProps) {
                       <div className="p-4">
                         <div className="flex-1">
                           <h3 className="text-lg text-secondary --color-secondary font-bold font-cooper-std">{product.name}</h3>
-                          <p className="text-primary font-bold">£{product.cost.toFixed(2)}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-primary font-bold">{getDisplayPrice(product)}</p>
+                            {hasSalePrice(product) && (
+                              <span className="text-sm text-gray-500 line-through">
+                                £{product.cost.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex justify-between items-center mt-2">
                           <div className="space-x-2">
@@ -706,7 +716,14 @@ export default function Products({ userId }: ProductsProps) {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-primary">
-                                £{product.cost.toFixed(2)}
+                                <div className="flex items-center gap-2">
+                                  <span>{getDisplayPrice(product)}</span>
+                                  {hasSalePrice(product) && (
+                                    <span className="text-xs text-gray-500 line-through">
+                                      £{product.cost.toFixed(2)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
