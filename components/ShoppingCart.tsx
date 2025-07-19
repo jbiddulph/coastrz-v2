@@ -114,18 +114,18 @@ export default function ShoppingCart() {
               <p className="text-sm text-secondary-light">£{item.cost.toFixed(2)} each</p>
             </div>
             <div className="flex items-center">
-              {item.quantity === 1 ? (
+              {item.min_quantity >= item.quantity && item.min_quantity > 1 ? (
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Only 1 available
+                  Min quantity: {item.min_quantity}
                 </span>
               ) : (
                 <>
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
                     className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                      item.quantity <= 1 ? 'opacity-50 cursor-not-allowed' : ''
+                      item.quantity <= item.min_quantity ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
-                    disabled={item.quantity <= 1}
+                    disabled={item.quantity <= item.min_quantity}
                   >
                     <MinusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   </button>
