@@ -389,6 +389,7 @@ export default function Products({ userId }: ProductsProps) {
         category_id: selectedCategory || null,
         image_url: imageUrl,
         quantity: editingProduct.quantity,
+        min_quantity: editingProduct.min_quantity || 1,
         status: newStatus
       };
 
@@ -446,6 +447,7 @@ export default function Products({ userId }: ProductsProps) {
         user_id: userId,
         slug,
         quantity: 1,
+        min_quantity: 1,
         status: editingProduct?.status || 'in_stock',
         category_id: selectedCategory || null
       };
@@ -867,7 +869,7 @@ export default function Products({ userId }: ProductsProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block mb-2 text-secondary">Quantity *</label>
                   <input
@@ -879,6 +881,21 @@ export default function Products({ userId }: ProductsProps) {
                     } : null)}
                     required
                     min="0"
+                    className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-secondary">Min Quantity *</label>
+                  <input
+                    type="number"
+                    value={editingProduct.min_quantity || 1}
+                    onChange={(e) => setEditingProduct(prev => prev ? {
+                      ...prev,
+                      min_quantity: parseInt(e.target.value)
+                    } : null)}
+                    required
+                    min="1"
                     className="w-full px-4 py-2 border border-secondary-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>

@@ -19,6 +19,7 @@ export interface Product {
   }[]
   slug: string
   quantity: number
+  min_quantity: number
   is_custom?: boolean
 }
 
@@ -39,6 +40,7 @@ export interface CartItem {
   image_url?: string;
   cost: number;
   quantity: number;
+  min_quantity: number;
   size?: string;
   color?: string;
   is_custom?: boolean;

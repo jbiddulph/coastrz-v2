@@ -62,7 +62,7 @@ export default function PublicProducts() {
     const initialQuantities: { [productId: string]: number } = {};
     products.forEach(product => {
       if (!selectedQuantities[product.id]) {
-        initialQuantities[product.id] = 1;
+        initialQuantities[product.id] = product.min_quantity || 1;
       }
     });
     if (Object.keys(initialQuantities).length > 0) {
@@ -208,8 +208,8 @@ export default function PublicProducts() {
   };
 
   // Update quantity for a specific product
-  const updateProductQuantity = (productId: string, newQuantity: number, maxQuantity: number) => {
-    if (newQuantity < 1) newQuantity = 1;
+  const updateProductQuantity = (productId: string, newQuantity: number, maxQuantity: number, minQuantity: number = 1) => {
+    if (newQuantity < minQuantity) newQuantity = minQuantity;
     if (newQuantity > maxQuantity) newQuantity = maxQuantity;
     
     setSelectedQuantities(prev => ({
@@ -218,9 +218,9 @@ export default function PublicProducts() {
     }));
   };
 
-  // Get selected quantity for a product (default to 1)
-  const getSelectedQuantity = (productId: string): number => {
-    return selectedQuantities[productId] || 1;
+  // Get selected quantity for a product (default to minimum quantity)
+  const getSelectedQuantity = (productId: string, minQuantity: number = 1): number => {
+    return selectedQuantities[productId] || minQuantity;
   };
 
   const renderFilterBadge = (label: string, value: string | undefined | null, filterType: 'size' | 'color') => {
@@ -298,10 +298,11 @@ export default function PublicProducts() {
     
     toast.success(`Added ${selectedQty} ${selectedQty === 1 ? 'item' : 'items'} to cart`);
     
-    // Reset selected quantity to 1 after adding to cart
+    // Reset selected quantity to minimum after adding to cart
+    const minQty = product.min_quantity || 1;
     setSelectedQuantities(prev => ({
       ...prev,
-      [product.id]: 1
+      [product.id]: minQty
     }));
   };
 
@@ -472,7 +473,8 @@ export default function PublicProducts() {
           ))
         ) : (
           filteredProducts.map((product) => {
-            const selectedQty = getSelectedQuantity(product.id);
+            const minQty = product.min_quantity || 1;
+            const selectedQty = getSelectedQuantity(product.id, minQty);
             const unitPrice = getActualPrice(product);
             const totalPrice = unitPrice * selectedQty;
             const currentCartItem = items.find(item => item.id === product.id);
@@ -592,10 +594,12 @@ export default function PublicProducts() {
                   </div>
                   <div className="mt-4 h-full">
                     {/* Quantity Selector */}
-                    {!isOutOfStock && availableQty > 1 && (
+                    {!isOutOfStock && (availableQty > 1 || minQty > 1) && (
                       <div className="mb-3">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Quantity {minQty > 1 && <span className="text-xs">(min: {minQty})</span>}
+                          </span>
                           <span className="text-sm text-gray-500 dark:text-gray-400">{availableQty} available</span>
                         </div>
                         <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
@@ -603,12 +607,12 @@ export default function PublicProducts() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              updateProductQuantity(product.id, selectedQty - 1, availableQty);
+                              updateProductQuantity(product.id, selectedQty - 1, availableQty, minQty);
                             }}
                             className={`p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                              selectedQty <= 1 ? 'opacity-50 cursor-not-allowed' : ''
+                              selectedQty <= minQty ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
-                            disabled={selectedQty <= 1}
+                            disabled={selectedQty <= minQty}
                           >
                             <MinusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           </button>
@@ -619,7 +623,7 @@ export default function PublicProducts() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              updateProductQuantity(product.id, selectedQty + 1, availableQty);
+                              updateProductQuantity(product.id, selectedQty + 1, availableQty, minQty);
                             }}
                             className={`p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
                               selectedQty >= availableQty ? 'opacity-50 cursor-not-allowed' : ''
@@ -634,7 +638,7 @@ export default function PublicProducts() {
                     
                     <div className="flex items-center justify-between mt-4">
                       <div className="flex flex-col">
-                        {selectedQty > 1 && !isOutOfStock && availableQty > 1 ? (
+                        {selectedQty > 1 && !isOutOfStock ? (
                           <>
                             <span className="text-sm text-gray-500 dark:text-gray-400">
                               {getDisplayPrice(product)} each
@@ -651,7 +655,7 @@ export default function PublicProducts() {
                             className="text-lg font-bold transition-colors duration-200"
                             style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}
                           >
-                            {getDisplayPrice(product)}
+                            {minQty > 1 ? `£${totalPrice.toFixed(2)} (min ${minQty})` : getDisplayPrice(product)}
                           </span>
                         )}
                         {hasSalePrice(product) && (

@@ -11,6 +11,7 @@ interface CartItem {
   image_url?: string;
   cost: number;
   quantity: number;
+  min_quantity: number;
   size?: string;
   color?: string;
 }
@@ -83,6 +84,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           image_url: product.image_url || undefined,
           cost: getActualPrice(product),
           quantity,
+          min_quantity: product.min_quantity,
           size: product.size || undefined,
           color: product.color || undefined,
         };
@@ -96,15 +98,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeItem(id);
-    } else {
-      setItems(prevItems =>
-        prevItems.map(item =>
+    setItems(prevItems => {
+      const item = prevItems.find(item => item.id === id);
+      if (!item) return prevItems;
+      
+      const minQty = item.min_quantity || 1;
+      
+      if (quantity <= 0 || quantity < minQty) {
+        // If trying to go below minimum, either remove or set to minimum
+        if (quantity <= 0) {
+          return prevItems.filter(item => item.id !== id);
+        } else {
+          return prevItems.map(item =>
+            item.id === id ? { ...item, quantity: minQty } : item
+          );
+        }
+      } else {
+        return prevItems.map(item =>
           item.id === id ? { ...item, quantity } : item
-        )
-      );
-    }
+        );
+      }
+    });
   };
 
   const clearCart = () => {
