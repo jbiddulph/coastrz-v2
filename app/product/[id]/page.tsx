@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { Product, ProductImage } from '@/types/types';
 import { supabase } from '@/utils/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
-import { getDisplayPrice, hasSalePrice } from '@/utils/utils';
+import { getDisplayPrice, hasSalePrice, getActualPrice } from '@/utils/utils';
 
 // Force dynamic rendering to prevent static generation errors
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const [images, setImages] = useState<ProductImage[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(4);
   const router = useRouter();
   const { addItem } = useCart();
 
@@ -108,9 +108,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
   const handleAddToCart = () => {
     if (product) {
-      for (let i = 0; i < quantity; i++) {
-        addItem(product);
-      }
+      addItem(product, quantity);
       toast.success(`Added ${quantity} ${quantity === 1 ? 'item' : 'items'} to cart`);
     }
   };
@@ -183,11 +181,16 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-bold transition-colors duration-200"
                       style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}>
-                  {getDisplayPrice(product)}
+                  £{(getActualPrice(product) * quantity).toFixed(2)}
                 </span>
                 {hasSalePrice(product) && (
                   <span className="text-lg text-gray-500 line-through">
-                    £{product.cost.toFixed(2)}
+                    £{(product.cost * quantity).toFixed(2)}
+                  </span>
+                )}
+                {quantity > 1 && (
+                  <span className="text-sm text-secondary-light">
+                    ({getDisplayPrice(product)} each)
                   </span>
                 )}
               </div>
@@ -213,18 +216,49 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             </div>
 
             <div className="flex gap-4 mb-8">
-              <div className="w-24">
+              <div className="w-40">
                 <label className="block text-sm font-medium text-secondary mb-1">Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value)))}
-                  className={`w-full p-2 border border-secondary-border rounded-lg focus:ring-2 focus:ring-primary ${
-                    product.quantity === 1 ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={product.quantity === 1}
-                />
+                <div className="flex items-center border border-secondary-border rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.max(4, quantity - 4))}
+                    className="px-3 py-2 text-secondary hover:text-primary transition-colors"
+                    disabled={quantity <= 4 || product.quantity === 1}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="4"
+                    step="4"
+                    value={quantity}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      // Ensure quantity is at least 4 and a multiple of 4
+                      if (value >= 4) {
+                        const roundedValue = Math.round(value / 4) * 4;
+                        setQuantity(roundedValue);
+                      } else {
+                        setQuantity(4);
+                      }
+                    }}
+                    className={`flex-1 p-2 border-0 text-center focus:ring-2 focus:ring-primary focus:outline-none ${
+                      product.quantity === 1 ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={product.quantity === 1}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(quantity + 4)}
+                    className="px-3 py-2 text-secondary hover:text-primary transition-colors"
+                    disabled={product.quantity === 1}
+                  >
+                    +
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Quantity must be in multiples of 4
+                </p>
                 {product.quantity === 1 && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Only 1 available
