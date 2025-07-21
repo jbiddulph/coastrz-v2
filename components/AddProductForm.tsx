@@ -136,7 +136,6 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
           color: color || null,
           cost: parseFloat(cost),
           quantity: 1,
-          min_quantity: 1,
           image_url: uploadedImages.find(img => img.isPrimary)?.url || uploadedImages[0].url
         }])
         .select()

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase/client';
 import Pagination from './Pagination';
 import Search from './Search';
-import { ChevronUpIcon, ChevronDownIcon, FunnelIcon, ShoppingBagIcon, EyeIcon, XMarkIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/solid';
+import { ChevronUpIcon, ChevronDownIcon, FunnelIcon, ShoppingBagIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 import ShoppingCart from './ShoppingCart';
@@ -46,9 +46,6 @@ export default function PublicProducts() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   
-  // State to track selected quantities for each product
-  const [selectedQuantities, setSelectedQuantities] = useState<{ [productId: string]: number }>({});
-
   const ITEMS_PER_PAGE = 12;
 
   useEffect(() => {
@@ -56,19 +53,6 @@ export default function PublicProducts() {
     fetchTotalProducts();
     fetchProducts();
   }, [currentPage, searchQuery, sortField, sortOrder, filters]);
-
-  // Initialize selected quantities when products change
-  useEffect(() => {
-    const initialQuantities: { [productId: string]: number } = {};
-    products.forEach(product => {
-      if (!selectedQuantities[product.id]) {
-        initialQuantities[product.id] = product.min_quantity || 1;
-      }
-    });
-    if (Object.keys(initialQuantities).length > 0) {
-      setSelectedQuantities(prev => ({ ...prev, ...initialQuantities }));
-    }
-  }, [products]);
 
   const fetchCategories = async () => {
     const { data, error } = await supabase
@@ -207,21 +191,7 @@ export default function PublicProducts() {
     setCurrentPage(1);
   };
 
-  // Update quantity for a specific product
-  const updateProductQuantity = (productId: string, newQuantity: number, maxQuantity: number, minQuantity: number = 1) => {
-    if (newQuantity < minQuantity) newQuantity = minQuantity;
-    if (newQuantity > maxQuantity) newQuantity = maxQuantity;
-    
-    setSelectedQuantities(prev => ({
-      ...prev,
-      [productId]: newQuantity
-    }));
-  };
 
-  // Get selected quantity for a product (default to minimum quantity)
-  const getSelectedQuantity = (productId: string, minQuantity: number = 1): number => {
-    return selectedQuantities[productId] || minQuantity;
-  };
 
   const renderFilterBadge = (label: string, value: string | undefined | null, filterType: 'size' | 'color') => {
     if (!value) return null;
@@ -281,29 +251,20 @@ export default function PublicProducts() {
     e.preventDefault();
     e.stopPropagation();
     
-    const selectedQty = getSelectedQuantity(product.id);
+    const addQty = product.quantity;
     const currentCartItem = items.find(item => item.id === product.id);
     const currentCartQty = currentCartItem ? currentCartItem.quantity : 0;
     
-    // Check if adding this quantity would exceed available stock
-    if (currentCartQty + selectedQty > product.quantity) {
+    // Check if adding the quantity would exceed available stock
+    if (currentCartQty + addQty > product.quantity) {
       toast.error(`Only ${product.quantity - currentCartQty} more items available`);
       return;
     }
     
-    // Add the selected quantity to cart
-    for (let i = 0; i < selectedQty; i++) {
-      addItem(product);
-    }
+    // Add the product quantity to cart
+    addItem(product, addQty);
     
-    toast.success(`Added ${selectedQty} ${selectedQty === 1 ? 'item' : 'items'} to cart`);
-    
-    // Reset selected quantity to minimum after adding to cart
-    const minQty = product.min_quantity || 1;
-    setSelectedQuantities(prev => ({
-      ...prev,
-      [product.id]: minQty
-    }));
+    toast.success(`Added ${addQty} ${addQty === 1 ? 'item' : 'items'} to cart`);
   };
 
   const filteredProducts = products.filter((product) => {
@@ -473,10 +434,9 @@ export default function PublicProducts() {
           ))
         ) : (
           filteredProducts.map((product) => {
-            const minQty = product.min_quantity || 1;
-            const selectedQty = getSelectedQuantity(product.id, minQty);
+            const addQty = product.quantity;
             const unitPrice = getActualPrice(product);
-            const totalPrice = unitPrice * selectedQty;
+            const totalPrice = unitPrice * addQty;
             const currentCartItem = items.find(item => item.id === product.id);
             const currentCartQty = currentCartItem ? currentCartItem.quantity : 0;
             const availableQty = product.quantity - currentCartQty;
@@ -577,9 +537,9 @@ export default function PublicProducts() {
                         {product.categories![0].name}
                       </button>
                     )}
-                    <h3 className="text-lg font-semibold group-hover:text-primary transition-colors font-cooper-std" style={{ color: isDarkMode ? 'var(--color-primary)' : 'var(--color-secondary)' }}>
-                      {product.name}
-                    </h3>
+                                      <h3 className="text-lg font-semibold group-hover:text-primary transition-colors font-cooper-std" style={{ color: isDarkMode ? 'var(--color-primary)' : 'var(--color-secondary)' }}>
+                    {product.name}{addQty > 1 && ` (${addQty})`}
+                  </h3>
                     {product.description && (
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
                         {product.description}
@@ -592,78 +552,21 @@ export default function PublicProducts() {
                   </div>
                   
                   </div>
-                  <div className="mt-4 h-full">
-                    {/* Quantity Selector */}
-                    {!isOutOfStock && (availableQty > 1 || minQty > 1) && (
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Quantity {minQty > 1 && <span className="text-xs">(min: {minQty})</span>}
-                          </span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">{availableQty} available</span>
-                        </div>
-                        <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              updateProductQuantity(product.id, selectedQty - 1, availableQty, minQty);
-                            }}
-                            className={`p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                              selectedQty <= minQty ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                            disabled={selectedQty <= minQty}
-                          >
-                            <MinusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          </button>
-                          <span className="px-4 py-2 text-center min-w-[3rem] border-x border-gray-300 dark:border-gray-600">
-                            {selectedQty}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              updateProductQuantity(product.id, selectedQty + 1, availableQty, minQty);
-                            }}
-                            className={`p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                              selectedQty >= availableQty ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                            disabled={selectedQty >= availableQty}
-                          >
-                            <PlusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between mt-4">
-                      <div className="flex flex-col">
-                        {selectedQty > 1 && !isOutOfStock ? (
-                          <>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {getDisplayPrice(product)} each
-                            </span>
-                            <span 
-                              className="text-lg font-bold transition-colors duration-200"
-                              style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}
-                            >
-                              £{totalPrice.toFixed(2)} total
-                            </span>
-                          </>
-                        ) : (
+                                      <div className="mt-4 h-full">
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex flex-col">
                           <span 
                             className="text-lg font-bold transition-colors duration-200"
                             style={{ color: isDarkMode ? 'var(--color-secondary)' : '#111827' }}
                           >
-                            {minQty > 1 ? `£${totalPrice.toFixed(2)} (min ${minQty})` : getDisplayPrice(product)}
+                            {addQty > 1 ? `£${totalPrice.toFixed(2)}` : getDisplayPrice(product)}
                           </span>
-                        )}
-                        {hasSalePrice(product) && (
-                          <span className="text-sm text-gray-500 line-through">
-                            £{(product.cost * selectedQty).toFixed(2)}
-                          </span>
-                        )}
-                      </div>
+                          {hasSalePrice(product) && (
+                            <span className="text-sm text-gray-500 line-through">
+                              £{(product.cost * addQty).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
                       <button
                         onClick={(e) => handleAddToCart(product, e)}
                         disabled={isOutOfStock}
