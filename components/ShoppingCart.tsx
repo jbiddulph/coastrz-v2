@@ -114,33 +114,26 @@ export default function ShoppingCart() {
               <p className="text-sm text-secondary-light">£{item.cost.toFixed(2)} each</p>
             </div>
             <div className="flex items-center">
-              {item.min_quantity >= item.quantity && item.min_quantity > 1 ? (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Min quantity: {item.min_quantity}
-                </span>
-              ) : (
-                <>
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                      item.quantity <= item.min_quantity ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    disabled={item.quantity <= item.min_quantity}
-                  >
-                    <MinusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  </button>
-                  <span className="mx-2 min-w-[2rem] text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                      item.quantity >= 10 ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    disabled={item.quantity >= 10}
-                  >
-                    <PlusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  </button>
-                </>
-              )}
+              {/* Remove min_quantity logic, just allow decrement to 1 */}
+              <button
+                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                  item.quantity <= 1 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                disabled={item.quantity <= 1}
+              >
+                <MinusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </button>
+              <span className="mx-2 min-w-[2rem] text-center">{item.quantity}</span>
+              <button
+                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                  item.quantity >= 10 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                disabled={item.quantity >= 10}
+              >
+                <PlusIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </button>
             </div>
             <button
               onClick={() => removeItem(item.id)}
