@@ -22,7 +22,7 @@ export default function QuickView({ isOpen, onClose, product }: QuickViewProps) 
   if (!product) return null
 
   const isInCart = items.some(item => item.id === product.id)
-  const isDisabled = product.quantity === 1 && isInCart
+  const isDisabled = !product.is_custom && product.quantity === 1 && isInCart
 
   const handleAddToCart = () => {
     if (isDisabled) {

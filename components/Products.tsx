@@ -366,12 +366,14 @@ export default function Products({ userId }: ProductsProps) {
         return;
       }
 
-      // Determine status based on quantity
+      // Determine status based on quantity (skip auto status change for custom products)
       let newStatus = editingProduct.status;
-      if (editingProduct.quantity === 0 && editingProduct.status === 'in_stock') {
-        newStatus = 'sold_out';
-      } else if (editingProduct.quantity > 0 && editingProduct.status === 'sold_out') {
-        newStatus = 'in_stock';
+      if (!editingProduct.is_custom) {
+        if (editingProduct.quantity === 0 && editingProduct.status === 'in_stock') {
+          newStatus = 'sold_out';
+        } else if (editingProduct.quantity > 0 && editingProduct.status === 'sold_out') {
+          newStatus = 'in_stock';
+        }
       }
 
       // Generate new slug if name has changed

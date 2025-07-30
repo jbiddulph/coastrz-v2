@@ -21,6 +21,7 @@ export interface Product {
   quantity: number
   min_quantity: number
   is_custom?: boolean
+  status?: 'in_stock' | 'sold_out' | 'hidden'
 }
 
 export interface ProductImage {

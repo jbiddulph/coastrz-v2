@@ -255,8 +255,8 @@ export default function PublicProducts() {
     const currentCartItem = items.find(item => item.id === product.id);
     const currentCartQty = currentCartItem ? currentCartItem.quantity : 0;
     
-    // Check if adding the quantity would exceed available stock
-    if (currentCartQty + addQty > product.quantity) {
+    // Check if adding the quantity would exceed available stock (skip for custom products)
+    if (!product.is_custom && currentCartQty + addQty > product.quantity) {
       toast.error(`Only ${product.quantity - currentCartQty} more items available`);
       return;
     }
@@ -440,7 +440,7 @@ export default function PublicProducts() {
             const currentCartItem = items.find(item => item.id === product.id);
             const currentCartQty = currentCartItem ? currentCartItem.quantity : 0;
             const availableQty = product.quantity - currentCartQty;
-            const isOutOfStock = availableQty <= 0;
+            const isOutOfStock = !product.is_custom && availableQty <= 0;
 
             return (
               <div 
