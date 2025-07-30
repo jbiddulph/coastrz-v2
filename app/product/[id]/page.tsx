@@ -259,7 +259,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Quantity must be in multiples of 4
                 </p>
-                {product.quantity === 1 && (
+                {!product.is_custom && product.quantity === 1 && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Only 1 available
                   </p>
@@ -270,11 +270,11 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             <button
               onClick={handleAddToCart}
               className={`w-full py-4 bg-primary text-white rounded-lg transition-colors text-lg font-medium ${
-                product.quantity === 1 ? 'hover:bg-hover-primary' : 'opacity-50 cursor-not-allowed'
+                product.quantity >= 1 || product.is_custom ? 'hover:bg-hover-primary' : 'opacity-50 cursor-not-allowed'
               }`}
-              disabled={product.quantity < 1}
+              disabled={!product.is_custom && product.quantity < 1}
             >
-              {product.quantity < 1 ? 'Out of Stock' : 'Add to Cart'}
+              {(!product.is_custom && product.quantity < 1) ? 'Out of Stock' : 'Add to Cart'}
             </button>
           </div>
         </div>

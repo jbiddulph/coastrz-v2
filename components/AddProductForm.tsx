@@ -124,6 +124,20 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
         return;
       }
 
+      // Check if the selected category is "custom"
+      let isCustomCategory = false;
+      if (categoryId) {
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('categories')
+          .select('name')
+          .eq('id', categoryId)
+          .single();
+        
+        if (!categoryError && categoryData) {
+          isCustomCategory = categoryData.name.toLowerCase() === 'custom';
+        }
+      }
+
       // Insert the product first
       const { data: product, error: productError } = await supabase
         .from('products')
@@ -136,6 +150,8 @@ export default function AddProductForm({ userId, onClose, onProductAdded }: AddP
           color: color || null,
           cost: parseFloat(cost),
           quantity: 1,
+          is_custom: isCustomCategory,
+          status: 'in_stock',
           image_url: uploadedImages.find(img => img.isPrimary)?.url || uploadedImages[0].url
         }])
         .select()
