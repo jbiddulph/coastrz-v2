@@ -115,7 +115,7 @@ export default function Footer() {
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link 
-                href="/privacy" 
+                href="/terms#privacy-policy" 
                 className={`text-sm hover:text-primary transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
               >
                 Privacy Policy
