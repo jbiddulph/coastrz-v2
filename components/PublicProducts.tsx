@@ -43,6 +43,7 @@ export default function PublicProducts() {
   const [quickViewImages, setQuickViewImages] = useState<ProductImage[]>([]);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [productQuantities, setProductQuantities] = useState<{ [productId: string]: number }>({});
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   
@@ -53,6 +54,19 @@ export default function PublicProducts() {
     fetchTotalProducts();
     fetchProducts();
   }, [currentPage, searchQuery, sortField, sortOrder, filters]);
+
+  // Initialize product quantities when products are loaded
+  useEffect(() => {
+    setProductQuantities(prev => {
+      const newQuantities = { ...prev };
+      products.forEach(product => {
+        if (!(product.id in newQuantities)) {
+          newQuantities[product.id] = 1; // Default quantity is 1
+        }
+      });
+      return newQuantities;
+    });
+  }, [products]);
 
   const fetchCategories = async () => {
     const { data, error } = await supabase
@@ -247,11 +261,22 @@ export default function PublicProducts() {
     }
   };
 
+  const getProductQuantity = (productId: string): number => {
+    return productQuantities[productId] || 1;
+  };
+
+  const setProductQuantity = (productId: string, quantity: number) => {
+    setProductQuantities(prev => ({
+      ...prev,
+      [productId]: Math.max(1, quantity)
+    }));
+  };
+
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const addQty = product.quantity;
+    const addQty = getProductQuantity(product.id);
     const currentCartItem = items.find(item => item.id === product.id);
     const currentCartQty = currentCartItem ? currentCartItem.quantity : 0;
     
@@ -261,7 +286,7 @@ export default function PublicProducts() {
       return;
     }
     
-    // Add the product quantity to cart
+    // Add the specified quantity to cart
     addItem(product, addQty);
     
     toast.success(`Added ${addQty} ${addQty === 1 ? 'item' : 'items'} to cart`);
@@ -434,7 +459,7 @@ export default function PublicProducts() {
           ))
         ) : (
           filteredProducts.map((product) => {
-            const addQty = product.quantity;
+            const addQty = getProductQuantity(product.id);
             const unitPrice = getActualPrice(product);
             const totalPrice = unitPrice * addQty;
             const currentCartItem = items.find(item => item.id === product.id);
@@ -553,6 +578,54 @@ export default function PublicProducts() {
                   
                   </div>
                                       <div className="mt-4 h-full">
+                      {/* Quantity selector */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Qty:</label>
+                        <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setProductQuantity(product.id, addQty - 1);
+                            }}
+                            className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                            disabled={addQty <= 1}
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            max={availableQty + addQty}
+                            value={addQty}
+                            onChange={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const value = parseInt(e.target.value) || 1;
+                              setProductQuantity(product.id, value);
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            className="w-12 px-1 py-1 text-center border-0 focus:ring-1 focus:ring-primary focus:outline-none bg-transparent text-gray-900 dark:text-gray-100"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setProductQuantity(product.id, addQty + 1);
+                            }}
+                            className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                            disabled={addQty >= availableQty + currentCartQty}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="flex items-center justify-between mt-4">
                         <div className="flex flex-col">
                           <span 
@@ -566,20 +639,25 @@ export default function PublicProducts() {
                               £{(product.cost * addQty).toFixed(2)}
                             </span>
                           )}
+                          {addQty > 1 && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              ({getDisplayPrice(product)} each)
+                            </span>
+                          )}
                         </div>
                       <button
                         onClick={(e) => handleAddToCart(product, e)}
-                        disabled={isOutOfStock}
+                        disabled={isOutOfStock || addQty > availableQty}
                         className={`rounded-full px-4 py-2 text-sm text-white transition-colors ${
-                          isOutOfStock
+                          isOutOfStock || addQty > availableQty
                             ? 'opacity-50 cursor-not-allowed bg-gray-400'
                             : 'hover:opacity-80'
                         }`}
                         style={{ 
-                          backgroundColor: isOutOfStock ? '#9CA3AF' : 'var(--color-primary)'
+                          backgroundColor: isOutOfStock || addQty > availableQty ? '#9CA3AF' : 'var(--color-primary)'
                         }}
                       >
-                        {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                        {isOutOfStock ? 'Out of Stock' : addQty > availableQty ? 'Not Enough Stock' : 'Add to Cart'}
                       </button>
                     </div>
                   </div>
